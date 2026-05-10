@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -8,11 +8,10 @@ import { EmailStep } from '../signup/steps/email-step'
 import { OtpStep } from '../signup/steps/otp-step'
 import Link from 'next/link'
 
-export const dynamic = 'force-dynamic'
-
 type LoginStep = 'email' | 'otp'
 
-export default function LoginPage() {
+// Inner component isolated so useSearchParams is inside a Suspense boundary
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/search'
@@ -58,8 +57,7 @@ export default function LoginPage() {
       throw new Error(data.error)
     }
 
-    // Sync the session to the browser Supabase client.
-    // This triggers onAuthStateChange → AuthProvider fetches the profile → navbar updates.
+    // Sync session to browser Supabase client → triggers onAuthStateChange → navbar updates
     if (data.access_token && data.refresh_token) {
       const supabase = createClient()
       await supabase.auth.setSession({
@@ -71,10 +69,6 @@ export default function LoginPage() {
     toast.success('Welcome back!')
     router.push(data.redirectTo)
   }
-
-
-
-
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted-bg px-4 py-8">
@@ -103,5 +97,18 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+// Wrap in Suspense — required by Next.js when useSearchParams is used in a client component
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-muted-bg">
+        <div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }

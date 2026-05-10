@@ -1,14 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { ListingCard } from '@/components/listing-card'
 import { Button } from '@/components/ui/button'
-
-export const dynamic = 'force-dynamic'
-
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
@@ -18,7 +15,7 @@ import { EmptyState } from '@/components/empty-state'
 const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 23.2156
 const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 72.6369
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
@@ -260,5 +257,17 @@ export default function SearchPage() {
       )}
 
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-muted-bg">
+        <div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" />
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   )
 }

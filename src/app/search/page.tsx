@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { ListingCard } from '@/components/listing-card'
 import { Button } from '@/components/ui/button'
+
+export const dynamic = 'force-dynamic'
+
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'

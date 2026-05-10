@@ -8,6 +8,8 @@ import { EmailStep } from '../signup/steps/email-step'
 import { OtpStep } from '../signup/steps/otp-step'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 type LoginStep = 'email' | 'otp'
 
 export default function LoginPage() {

@@ -1,6 +1,16 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
+// Lazily initialized — avoids build-time crash when RESEND_API_KEY is missing
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY
+    if (!key) throw new Error('[email] Missing RESEND_API_KEY environment variable')
+    _resend = new Resend(key)
+  }
+  return _resend
+}
+
 const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@campusnest.in'
 
 interface SendEmailParams {
@@ -10,7 +20,7 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: `CampusNest <${fromEmail}>`,
     to,
     subject,

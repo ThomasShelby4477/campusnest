@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { MapPin, Home, Users, CheckCircle, Wifi, Thermometer, Utensils, Droplets, ShieldCheck, UserCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ListingContactButton } from './contact-button'
+import { BackButton } from './back-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,8 +50,15 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="min-h-screen bg-muted-bg pb-16">
-      
-      {/* Hero Images - Simple scroll snap container for MVP without client-side JS carousel complexity initially, or we can use Embla. Let's use a native scroll snap for SSR simplicity */}
+
+      {/* Back button bar */}
+      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-border-light">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-12 flex items-center">
+          <BackButton />
+        </div>
+      </div>
+
+      {/* Hero Images */}
       <div className="w-full h-[40vh] sm:h-[50vh] flex overflow-x-auto snap-x snap-mandatory bg-black">
         {images.map((img, i) => (
           <div key={i} className="min-w-full h-full relative snap-center">

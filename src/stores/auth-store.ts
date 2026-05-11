@@ -8,6 +8,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void
   updateUser: (updates: Partial<Profile>) => void
   clearUser: () => void
+  signOut: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -20,6 +21,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: state.user ? { ...state.user, ...updates } : null,
     })),
   clearUser: () => set({ user: null, isLoading: false }),
+  signOut: async () => {
+    // Clear server-side cookie first, then browser state
+    await fetch('/api/auth/signout', { method: 'POST' })
+    const { createClient } = await import('@/lib/supabase/client')
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    set({ user: null, isLoading: false })
+  },
 }))
 
 /* ── Signup step tracking ────────────────────────────────── */
@@ -31,6 +40,7 @@ export type SignupStep =
   | 'profile'
   | 'id-upload'
   | 'pending'
+  | 'already-exists'
 
 interface SignupState {
   step: SignupStep

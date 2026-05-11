@@ -41,7 +41,7 @@ export default function SignupPage() {
 
     if (res.status === 409 && data.error === 'user_exists') {
       // User already registered — prompt them to log in
-      goToStep('already-exists' as typeof step)
+      goToStep('already-exists')
       return
     }
 

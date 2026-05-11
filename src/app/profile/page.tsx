@@ -14,7 +14,7 @@ import Link from 'next/link'
 import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { user, setUser } = useAuthStore()
+  const { user, setUser, signOut } = useAuthStore()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
@@ -67,9 +67,8 @@ export default function ProfilePage() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    router.push('/')
+    await signOut()
+    router.push('/login')
   }
 
   const verifiedBadge = user.verified_status === 'VERIFIED'

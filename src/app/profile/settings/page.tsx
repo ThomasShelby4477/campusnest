@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AlertTriangle, Trash2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
+  const { user, signOut } = useAuthStore()
   const supabase = createClient()
   const router = useRouter()
 
@@ -18,20 +20,14 @@ export default function SettingsPage() {
     }
 
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (user) {
-      // In Supabase, the best way for a user to delete their own account from the client 
-      // without giving the service role key to the client is to call an Edge Function,
-      // or to set their profile to inactive and let a cron job handle the Auth user deletion.
-      // For this spec, we will set is_active=false and clear their session.
-      
-      const { error } = await supabase.from('profiles').update({ 
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+
+    if (authUser) {
+      const { error } = await supabase.from('profiles').update({
         is_active: false,
         name: 'Deleted User',
-        email: `deleted-${user.id}@nfsu.ac.in`, // anonymize
         phone: null
-      }).eq('id', user.id)
+      }).eq('id', authUser.id)
 
       if (error) {
         toast.error('Failed to delete account data')
@@ -39,7 +35,7 @@ export default function SettingsPage() {
         return
       }
 
-      await supabase.auth.signOut()
+      await signOut()
       toast.success('Account successfully deleted')
       router.push('/')
     }

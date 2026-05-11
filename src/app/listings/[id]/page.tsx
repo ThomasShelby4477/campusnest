@@ -5,6 +5,8 @@ import { MapPin, Home, Users, CheckCircle, Wifi, Thermometer, Utensils, Droplets
 import { Button } from '@/components/ui/button'
 import { ListingContactButton } from './contact-button'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -15,7 +17,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     .select(`
       *,
       listing_images ( url, is_primary, "order" ),
-      profiles ( name, avatar_url, verified_status, verification_badge, role )
+      profiles!listings_poster_id_fkey ( name, avatar_url, verified_status, verification_badge, role )
     `)
     .eq('id', id)
     .single()
@@ -42,7 +44,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const images = [...(listing.listing_images || [])].sort((a, b) => a.order - b.order)
   if (images.length === 0) images.push({ url: '/placeholder-listing.png' })
 
-  const { profiles: poster } = listing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const poster = (listing as any)['profiles!listings_poster_id_fkey'] ?? listing.profiles ?? null
 
   return (
     <div className="min-h-screen bg-muted-bg pb-16">

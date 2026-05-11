@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Heart, MapPin, CheckCircle } from 'lucide-react'
+import { Heart, MapPin, CheckCircle, Wifi, Wind, UtensilsCrossed, BedDouble } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ListingCardProps {
@@ -12,133 +12,129 @@ interface ListingCardProps {
   listing: any
   currentUserId?: string
   initialSaved?: boolean
-  /** When provided, card click calls this instead of navigating to the detail page */
+  /** When provided, card click calls this instead of navigating */
   onSelect?: () => void
 }
 
 export function ListingCard({ listing, currentUserId, initialSaved = false, onSelect }: ListingCardProps) {
   const [isSaved, setIsSaved] = useState(initialSaved)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const primaryImage = listing.listing_images?.find((img: any) => img.is_primary)?.url 
-    || listing.listing_images?.[0]?.url 
-    || '/placeholder-listing.png'
+
+  const primaryImage =
+    listing.listing_images?.find((img: any) => img.is_primary)?.url ??
+    listing.listing_images?.[0]?.url ??
+    '/placeholder-listing.png'
 
   const toggleSave = async (e: React.MouseEvent) => {
-    e.preventDefault() // prevent navigation if wrapped in Link
-    if (!currentUserId) {
-      toast.error('Log in to save listings')
-      return
-    }
-
-    const newSavedState = !isSaved
-    setIsSaved(newSavedState) // optimistic update
-
+    e.preventDefault()
+    e.stopPropagation()
+    if (!currentUserId) { toast.error('Log in to save listings'); return }
+    const next = !isSaved
+    setIsSaved(next)
     const supabase = createClient()
     try {
-      if (newSavedState) {
-        const { error } = await supabase
-          .from('saved_listings')
-          .insert({ user_id: currentUserId, listing_id: listing.id })
-        if (error) throw error
-        toast.success('Saved to favorites')
+      if (next) {
+        await supabase.from('saved_listings').insert({ user_id: currentUserId, listing_id: listing.id })
+        toast.success('Saved!')
       } else {
-        const { error } = await supabase
-          .from('saved_listings')
-          .delete()
-          .match({ user_id: currentUserId, listing_id: listing.id })
-        if (error) throw error
-        toast.info('Removed from favorites')
+        await supabase.from('saved_listings').delete().match({ user_id: currentUserId, listing_id: listing.id })
+        toast.info('Removed from saved')
       }
-    } catch (err) {
-      console.error(err)
-      setIsSaved(!newSavedState) // revert optimistic update
-      toast.error('Failed to update favorites')
+    } catch {
+      setIsSaved(!next)
+      toast.error('Failed to update')
     }
   }
 
+  const genderLabel = listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed === 'MALE' ? 'Boys' : 'Girls'
+
   const inner = (
-    <div className="bg-white rounded-xl border border-border-light overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
-        {/* Image Container */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted-bg">
-          <Image
-            src={primaryImage}
-            alt={listing.title}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          
-          {/* Top badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            <span className="bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-md text-xs font-semibold text-navy shadow-sm">
-              {listing.room_type}
-            </span>
+    <div className="group flex bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer">
+
+      {/* Image — fixed 40% width */}
+      <div className="relative w-[38%] shrink-0 bg-muted-bg overflow-hidden">
+        <Image
+          src={primaryImage}
+          alt={listing.title}
+          fill
+          sizes="200px"
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+
+        {/* Verified badge */}
+        {listing.is_verified && (
+          <div className="absolute top-2 left-2 bg-success text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5">
+            <CheckCircle className="w-2.5 h-2.5" /> Verified
           </div>
+        )}
 
-          {listing.is_verified && (
-            <div className="absolute top-3 right-3 bg-success/90 backdrop-blur-sm text-white px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 shadow-sm">
-              <CheckCircle className="w-3 h-3" />
-              Verified
-            </div>
-          )}
+        {/* Save button */}
+        <button
+          onClick={toggleSave}
+          className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow hover:scale-110 transition-transform"
+          aria-label={isSaved ? 'Unsave' : 'Save'}
+        >
+          <Heart className={`w-3.5 h-3.5 transition-colors ${isSaved ? 'fill-coral text-coral' : 'text-text-muted'}`} />
+        </button>
+      </div>
 
-          {/* Heart button */}
-          <button
-            onClick={toggleSave}
-            className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
-            aria-label={isSaved ? "Remove from saved" : "Save listing"}
-          >
-            <Heart 
-              className={`w-4 h-4 transition-colors ${isSaved ? 'fill-coral text-coral' : 'text-text-muted hover:text-coral'}`} 
-            />
-          </button>
+      {/* Content — right side */}
+      <div className="flex flex-col flex-1 p-3 min-w-0">
+
+        {/* Type + Gender pills */}
+        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+          <span className="px-2 py-0.5 bg-navy/10 text-navy text-[11px] font-semibold rounded-full">{listing.room_type}</span>
+          <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{genderLabel}</span>
+          <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{listing.furnished}</span>
         </div>
 
-        {/* Content Container */}
-        <div className="p-4 flex flex-col flex-1">
-          <div className="flex justify-between items-start gap-2 mb-2">
-            <h3 className="font-semibold text-text-primary text-lg leading-tight line-clamp-1 group-hover:text-coral transition-colors">
-              {listing.title}
-            </h3>
-            <p className="font-bold text-navy whitespace-nowrap text-lg">
-              ₹{listing.rent}<span className="text-sm font-normal text-text-muted">/mo</span>
-            </p>
-          </div>
+        {/* Title */}
+        <h3 className="font-bold text-text-primary text-sm leading-snug line-clamp-2 group-hover:text-coral transition-colors mb-1">
+          {listing.title}
+        </h3>
 
-          <div className="flex items-center gap-1 text-text-muted text-sm mb-3">
-            <MapPin className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{listing.address}</span>
-          </div>
+        {/* Address */}
+        <div className="flex items-start gap-1 text-text-muted mb-2">
+          <MapPin className="w-3 h-3 shrink-0 mt-[3px]" />
+          <span className="text-[11px] line-clamp-1">{listing.address}</span>
+        </div>
 
-          <div className="mt-auto pt-3 border-t border-border-light flex items-center justify-between text-xs font-medium text-text-muted">
-            <div className="flex items-center gap-1.5">
-              <span className="px-2 py-1 bg-muted-bg rounded">
-                {listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed}
-              </span>
-              <span className="px-2 py-1 bg-muted-bg rounded">
-                {listing.furnished}
-              </span>
-            </div>
-            {listing.distance_from_college !== null && (
-              <span className="text-navy bg-navy/5 px-2 py-1 rounded">
-                {listing.distance_from_college.toFixed(1)} km to NFSU
-              </span>
-            )}
+        {/* Amenities row */}
+        <div className="flex items-center gap-2 mb-2.5">
+          {listing.has_wifi && <Wifi className="w-3.5 h-3.5 text-success" title="WiFi" />}
+          {listing.has_ac && <Wind className="w-3.5 h-3.5 text-blue-400" title="AC" />}
+          {listing.food_available && <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" title="Food" />}
+          {listing.roommates_needed > 1 && (
+            <span className="flex items-center gap-0.5 text-[11px] text-text-muted">
+              <BedDouble className="w-3.5 h-3.5" /> {listing.roommates_needed}
+            </span>
+          )}
+          {listing.distance_from_college != null && (
+            <span className="ml-auto text-[11px] font-medium text-navy bg-navy/5 px-1.5 py-0.5 rounded-full">
+              {listing.distance_from_college.toFixed(1)} km
+            </span>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="mt-auto flex items-end justify-between">
+          <div>
+            <span className="text-lg font-black text-navy">₹{listing.rent.toLocaleString('en-IN')}</span>
+            <span className="text-[11px] text-text-muted font-normal"> /mo</span>
           </div>
+          {listing.deposit > 0 && (
+            <span className="text-[11px] text-text-muted">Dep. ₹{listing.deposit.toLocaleString('en-IN')}</span>
+          )}
         </div>
       </div>
+    </div>
   )
 
   if (onSelect) {
-    return (
-      <div className="group block cursor-pointer" onClick={onSelect}>
-        {inner}
-      </div>
-    )
+    return <div onClick={onSelect}>{inner}</div>
   }
 
   return (
-    <Link href={`/listings/${listing.id}`} className="group block">
+    <Link href={`/listings/${listing.id}`} className="block">
       {inner}
     </Link>
   )

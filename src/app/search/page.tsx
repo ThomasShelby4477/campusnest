@@ -177,7 +177,7 @@ function SearchContent() {
           />
         </div>
       ) : (
-        <div className="p-3 space-y-3 pb-24">
+        <div className="p-3 flex flex-col gap-2.5 pb-24">
           {listings.map(l => (
             <div
               key={l.id}

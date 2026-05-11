@@ -1,35 +1,36 @@
 'use client'
 
 import { useEffect, useState, useCallback, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
-import { ListingCard } from '@/components/listing-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { SlidersHorizontal, Map as MapIcon, LayoutGrid } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
+import { ListingCard } from '@/components/listing-card'
+import { ListingDetailPanel } from '@/components/listing-detail-panel'
 
 const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 23.2156
 const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 72.6369
 const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
 function SearchContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [listings, setListings] = useState<any[]>([])
   const [savedListingIds, setSavedListingIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
-  const [viewMode, setViewMode] = useState<'both' | 'list' | 'map'>('both') // responsive view mode
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
+  // null = no selection; object = selected listing
+  const [selectedListing, setSelectedListing] = useState<any | null>(null)
 
-  // Filter states
+  // Filters
   const [minRent, setMinRent] = useState(searchParams.get('minRent') || '')
   const [maxRent, setMaxRent] = useState(searchParams.get('maxRent') || '')
   const [roomType, setRoomType] = useState(searchParams.get('roomType') || 'ALL')
@@ -45,14 +46,9 @@ function SearchContent() {
   const fetchListings = useCallback(async (isLoadMore = false) => {
     setLoading(true)
     const supabase = createClient()
-    
     let query = supabase
       .from('listings')
-      .select(`
-        *,
-        listing_images ( url, is_primary ),
-        profiles!listings_poster_id_fkey ( name, avatar_url )
-      `)
+      .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey ( name, avatar_url )`)
       .eq('is_active', true)
       .eq('is_verified', true)
 
@@ -62,210 +58,226 @@ function SearchContent() {
     if (gender !== 'ALL') query = query.eq('gender_allowed', gender)
 
     const currentPage = isLoadMore ? page + 1 : 0
-    query = query.range(currentPage * 12, currentPage * 12 + 11)
-    query = query.order('created_at', { ascending: false })
+    query = query.range(currentPage * 12, currentPage * 12 + 11).order('created_at', { ascending: false })
 
     const { data, error } = await query
-
-    if (error) {
-      console.error('fetchListings error:', error)
-    }
-
+    if (error) console.error('fetchListings error:', error)
     if (data) {
-      if (isLoadMore) {
-        setListings(prev => [...prev, ...data])
-        setPage(currentPage)
-      } else {
-        setListings(data)
-        setPage(0)
-      }
+      if (isLoadMore) { setListings(prev => [...prev, ...data]); setPage(currentPage) }
+      else { setListings(data); setPage(0) }
       setHasMore(data.length === 12)
     }
     setLoading(false)
   }, [minRent, maxRent, roomType, gender, page])
 
+  useEffect(() => { fetchSaved() }, [fetchSaved])
+  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, gender]) // eslint-disable-line
+
+  // Reset to list on desktop
   useEffect(() => {
-    fetchSaved()
-  }, [fetchSaved])
+    const handle = () => { if (window.innerWidth >= 1024) setViewMode('list') }
+    window.addEventListener('resize', handle)
+    return () => window.removeEventListener('resize', handle)
+  }, [])
 
-  useEffect(() => {
-    fetchListings(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minRent, maxRent, roomType, gender]) // refetch on filter change
+  const handleSelectListing = (listing: any) => {
+    setSelectedListing(prev => prev?.id === listing.id ? null : listing)
+  }
 
+  const FiltersBar = (
+    <div className="p-3 bg-white border-b border-border-light sticky top-0 z-10 shadow-sm flex flex-wrap items-center gap-2">
+      <div className="flex items-center text-sm font-semibold text-text-primary mr-1">
+        <SlidersHorizontal className="w-4 h-4 mr-1.5 text-text-muted" /> Filters
+      </div>
+      <Select value={roomType} onValueChange={v => setRoomType(v ?? 'ALL')}>
+        <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue placeholder="Room Type" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All Types</SelectItem>
+          <SelectItem value="SINGLE">Single</SelectItem>
+          <SelectItem value="SHARED">Shared</SelectItem>
+          <SelectItem value="1BHK">1 BHK</SelectItem>
+          <SelectItem value="PG">PG</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select value={gender} onValueChange={v => setGender(v ?? 'ALL')}>
+        <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue placeholder="Gender" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">Any Gender</SelectItem>
+          <SelectItem value="MALE">Boys Only</SelectItem>
+          <SelectItem value="FEMALE">Girls Only</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className="flex items-center gap-1.5">
+        <Input placeholder="Min ₹" className="w-[72px] h-8 text-xs" value={minRent} onChange={e => setMinRent(e.target.value)} />
+        <span className="text-text-muted text-xs">–</span>
+        <Input placeholder="Max ₹" className="w-[72px] h-8 text-xs" value={maxRent} onChange={e => setMaxRent(e.target.value)} />
+      </div>
+    </div>
+  )
 
-  // Handle responsive view mode toggle on mobile
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setViewMode('both')
-      } else if (viewMode === 'both') {
-        setViewMode('list')
-      }
-    }
-    window.addEventListener('resize', handleResize)
-    handleResize()
-    return () => window.removeEventListener('resize', handleResize)
-  }, [viewMode])
+  const MapPanel = (
+    <div className="w-full h-full relative">
+      {!MAPS_API_KEY ? (
+        <div className="w-full h-full flex items-center justify-center text-text-muted text-sm p-8 text-center">
+          Map requires Google Maps API Key
+        </div>
+      ) : (
+        <APIProvider apiKey={MAPS_API_KEY}>
+          <Map
+            mapId="campusnest-search"
+            defaultCenter={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}
+            defaultZoom={13}
+            gestureHandling="greedy"
+            disableDefaultUI={false}
+            zoomControl={true}
+          >
+            {/* Campus */}
+            <AdvancedMarker position={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}>
+              <Pin background="#1E3A5F" borderColor="#1E3A5F" glyphColor="white" />
+            </AdvancedMarker>
 
-  return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-muted-bg">
-      
-      {/* Map Panel (Desktop 55vw, Mobile full conditionally) */}
-      {(viewMode === 'both' || viewMode === 'map') && (
-        <div className={`h-full ${viewMode === 'both' ? 'w-[55vw]' : 'w-full'} relative bg-border-light hidden lg:block lg:w-[55vw]`}>
-          {!MAPS_API_KEY ? (
-            <div className="w-full h-full flex items-center justify-center p-8 text-center text-text-muted">
-              Map requires Google Maps API Key
-            </div>
-          ) : (
-            <APIProvider apiKey={MAPS_API_KEY}>
-              <Map
-                mapId="campusnest-search"
-                defaultCenter={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}
-                defaultZoom={13}
-                gestureHandling="greedy"
-                disableDefaultUI={true}
-              >
-                {/* Campus marker */}
-                <AdvancedMarker position={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}>
-                  <Pin background="#1E3A5F" borderColor="#1E3A5F" glyphColor="white" />
+            {/* Listings */}
+            {listings
+              .filter(l => l.latitude != null && l.longitude != null)
+              .map(l => (
+                <AdvancedMarker
+                  key={l.id}
+                  position={{ lat: l.latitude, lng: l.longitude }}
+                  onClick={() => handleSelectListing(l)}
+                >
+                  <div className={`px-2 py-1 rounded-full text-xs font-bold shadow-lg whitespace-nowrap cursor-pointer transition-all ${
+                    selectedListing?.id === l.id
+                      ? 'bg-navy text-white scale-110'
+                      : 'bg-coral text-white hover:scale-105'
+                  }`}>
+                    ₹{l.rent}
+                  </div>
                 </AdvancedMarker>
+              ))
+            }
+          </Map>
+        </APIProvider>
+      )}
+    </div>
+  )
 
-                {/* Listing markers — guard against null lat/lng */}
-                {listings
-                  .filter(l => l.latitude != null && l.longitude != null)
-                  .map(l => (
-                    <AdvancedMarker
-                      key={l.id}
-                      position={{ lat: l.latitude, lng: l.longitude }}
-                      title={`₹${l.rent}/mo`}
-                    >
-                      <div className="bg-coral text-white text-xs font-bold px-2 py-1 rounded-full shadow-md whitespace-nowrap">
-                        ₹{l.rent}
-                      </div>
-                    </AdvancedMarker>
-                  ))
-                }
-              </Map>
-            </APIProvider>
+  const ListPanel = (
+    <div className="flex-1 overflow-y-auto">
+      {loading && page === 0 ? (
+        <div className="flex justify-center p-12">
+          <span className="w-8 h-8 border-4 border-coral/30 border-t-coral rounded-full animate-spin" />
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="py-8">
+          <EmptyState
+            icon="search" title="No listings found"
+            description="Try adjusting your filters."
+            actionLabel="Clear Filters"
+            onAction={() => { setMinRent(''); setMaxRent(''); setRoomType('ALL'); setGender('ALL') }}
+          />
+        </div>
+      ) : (
+        <div className="p-3 space-y-3 pb-24">
+          {listings.map(l => (
+            <div
+              key={l.id}
+              onClick={() => handleSelectListing(l)}
+              className={`cursor-pointer rounded-xl transition-all ${selectedListing?.id === l.id ? 'ring-2 ring-coral' : ''}`}
+            >
+              <ListingCard
+                listing={l}
+                currentUserId={user?.id}
+                initialSaved={savedListingIds.has(l.id)}
+              />
+            </div>
+          ))}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={() => fetchListings(true)} disabled={loading}>
+                {loading ? 'Loading...' : 'Load More'}
+              </Button>
+            </div>
           )}
         </div>
       )}
+    </div>
+  )
 
-      {/* List Panel (Desktop 45vw, Mobile full conditionally) */}
-      {(viewMode === 'both' || viewMode === 'list') && (
-        <div className={`h-full overflow-y-auto ${viewMode === 'both' ? 'w-[45vw] min-w-[500px]' : 'w-full'} flex flex-col`}>
-          
-          {/* Mobile view toggle */}
-          <div className="lg:hidden p-4 border-b bg-white flex justify-between gap-2">
-            <Button 
-              variant={viewMode === 'list' ? 'default' : 'outline'} 
-              className="flex-1"
-              onClick={() => setViewMode('list')}
-            >
-              <LayoutGrid className="w-4 h-4 mr-2" /> List
-            </Button>
-            <Button 
-              variant={'outline'} 
-              className="flex-1"
-              onClick={() => setViewMode('map')}
-            >
-              <MapIcon className="w-4 h-4 mr-2" /> Map
-            </Button>
-          </div>
+  return (
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-muted-bg">
 
-          {/* Filters Bar */}
-          <div className="p-4 bg-white border-b border-border-light sticky top-0 z-10 shadow-sm flex flex-wrap items-center gap-3">
-            <div className="flex items-center text-sm font-semibold text-text-primary mr-2">
-              <SlidersHorizontal className="w-4 h-4 mr-2 text-text-muted" /> Filters
-            </div>
-            
-            <Select value={roomType} onValueChange={(v) => setRoomType(v ?? 'ALL')}>
-              <SelectTrigger className="w-[130px] h-9 text-sm"><SelectValue placeholder="Room Type" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Types</SelectItem>
-                <SelectItem value="SINGLE">Single</SelectItem>
-                <SelectItem value="SHARED">Shared</SelectItem>
-                <SelectItem value="1BHK">1 BHK</SelectItem>
-                <SelectItem value="PG">PG</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* ── DESKTOP layout ───────────────────────────────── */}
+      <div className="hidden lg:flex w-full h-full">
+        {/* Map — always visible on desktop */}
+        <div className="flex-1 h-full">{MapPanel}</div>
 
-            <Select value={gender} onValueChange={(v) => setGender(v ?? 'ALL')}>
-              <SelectTrigger className="w-[120px] h-9 text-sm"><SelectValue placeholder="Gender" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Any Gender</SelectItem>
-                <SelectItem value="MALE">Boys Only</SelectItem>
-                <SelectItem value="FEMALE">Girls Only</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* List panel */}
+        <div className={`h-full flex flex-col bg-white border-l border-border-light transition-all duration-300 ${selectedListing ? 'w-[400px]' : 'w-[420px]'}`}>
+          {FiltersBar}
+          {ListPanel}
+        </div>
 
-            <div className="flex items-center gap-2">
-              <Input 
-                placeholder="Min ₹" 
-                className="w-[80px] h-9 text-sm" 
-                value={minRent} 
-                onChange={e => setMinRent(e.target.value)} 
-              />
-              <span className="text-text-muted">-</span>
-              <Input 
-                placeholder="Max ₹" 
-                className="w-[80px] h-9 text-sm" 
-                value={maxRent} 
-                onChange={e => setMaxRent(e.target.value)} 
-              />
-            </div>
-          </div>
+        {/* Detail panel slides in from right on desktop */}
+        <div className={`h-full border-l border-border-light overflow-hidden transition-all duration-300 bg-white ${selectedListing ? 'w-[380px]' : 'w-0'}`}>
+          {selectedListing && (
+            <ListingDetailPanel
+              listing={selectedListing}
+              currentUserId={user?.id}
+              initialSaved={savedListingIds.has(selectedListing.id)}
+              onClose={() => setSelectedListing(null)}
+            />
+          )}
+        </div>
+      </div>
 
-          {/* Listings Grid */}
-          <div className="flex-1 p-4 bg-muted-bg">
-            {loading && page === 0 ? (
-              <div className="flex justify-center p-8">
-                <span className="w-8 h-8 border-4 border-coral/30 border-t-coral rounded-full animate-spin" />
-              </div>
-            ) : listings.length === 0 ? (
-              <div className="py-8">
-                <EmptyState
-                  icon="search"
-                  title="No listings found"
-                  description="Try adjusting your filters or broadening your search criteria."
-                  actionLabel="Clear Filters"
-                  onAction={() => {
-                    setMinRent(''); setMaxRent(''); setRoomType('ALL'); setGender('ALL');
-                  }}
+      {/* ── MOBILE layout ────────────────────────────────── */}
+      <div className="flex lg:hidden flex-col w-full h-full">
+        {/* Toggle bar */}
+        <div className="bg-white border-b border-border-light flex px-4 py-2 gap-2 shrink-0">
+          <Button size="sm" variant={viewMode === 'list' ? 'default' : 'outline'} className="flex-1 gap-1.5" onClick={() => setViewMode('list')}>
+            <LayoutGrid className="w-4 h-4" /> List
+          </Button>
+          <Button size="sm" variant={viewMode === 'map' ? 'default' : 'outline'} className="flex-1 gap-1.5" onClick={() => setViewMode('map')}>
+            <MapIcon className="w-4 h-4" /> Map
+          </Button>
+        </div>
+
+        {viewMode === 'map' ? (
+          /* Full-screen map on mobile */
+          <div className="flex-1 relative">
+            {MapPanel}
+            {/* Bottom sheet for selected listing on mobile */}
+            {selectedListing && (
+              <div className="absolute bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl">
+                <ListingDetailPanel
+                  listing={selectedListing}
+                  currentUserId={user?.id}
+                  initialSaved={savedListingIds.has(selectedListing.id)}
+                  onClose={() => setSelectedListing(null)}
                 />
               </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20 sm:pb-8">
-                  {listings.map(l => (
-                    <ListingCard 
-                      key={l.id} 
-                      listing={l} 
-                      currentUserId={user?.id}
-                      initialSaved={savedListingIds.has(l.id)} 
-                    />
-                  ))}
-                </div>
-                {hasMore && (
-                  <div className="flex justify-center pb-8">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => fetchListings(true)}
-                      disabled={loading}
-                    >
-                      {loading ? 'Loading...' : 'Load More'}
-                    </Button>
-                  </div>
-                )}
-              </>
             )}
           </div>
+        ) : (
+          /* List view on mobile */
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {FiltersBar}
+            {ListPanel}
+          </div>
+        )}
+      </div>
 
+      {/* Mobile full-screen detail when tapping list card */}
+      {selectedListing && viewMode === 'list' && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-white">
+          <ListingDetailPanel
+            listing={selectedListing}
+            currentUserId={user?.id}
+            initialSaved={savedListingIds.has(selectedListing.id)}
+            onClose={() => setSelectedListing(null)}
+          />
         </div>
       )}
-
     </div>
   )
 }

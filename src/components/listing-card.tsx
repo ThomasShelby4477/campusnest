@@ -127,7 +127,6 @@ export function ListingCard({ listing, currentUserId, initialSaved = false, onSe
           </div>
         </div>
       </div>
-    </div>
   )
 
   if (onSelect) {

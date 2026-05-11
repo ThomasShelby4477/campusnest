@@ -84,7 +84,7 @@ export default function MyListingsPage() {
   return (
     <div className="min-h-screen bg-muted-bg py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-20 sm:pb-8">
       <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sticky top-16 z-30 bg-muted-bg/95 backdrop-blur-sm py-4 -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-navy/10 flex items-center justify-center">
               <Building className="w-6 h-6 text-navy" />

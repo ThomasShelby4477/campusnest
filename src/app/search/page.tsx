@@ -81,7 +81,7 @@ function SearchContent() {
   }, [])
 
   const handleSelectListing = (listing: any) => {
-    setSelectedListing(prev => prev?.id === listing.id ? null : listing)
+    setSelectedListing((prev: any) => prev?.id === listing.id ? null : listing)
   }
 
   const FiltersBar = (

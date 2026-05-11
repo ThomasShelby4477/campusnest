@@ -100,9 +100,9 @@ export function ListingCard({ listing, currentUserId, initialSaved = false, onSe
 
         {/* Amenities row */}
         <div className="flex items-center gap-2 mb-2.5">
-          {listing.has_wifi && <Wifi className="w-3.5 h-3.5 text-success" title="WiFi" />}
-          {listing.has_ac && <Wind className="w-3.5 h-3.5 text-blue-400" title="AC" />}
-          {listing.food_available && <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" title="Food" />}
+          {listing.has_wifi && <Wifi className="w-3.5 h-3.5 text-success" />}
+          {listing.has_ac && <Wind className="w-3.5 h-3.5 text-blue-400" />}
+          {listing.food_available && <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />}
           {listing.roommates_needed > 1 && (
             <span className="flex items-center gap-0.5 text-[11px] text-text-muted">
               <BedDouble className="w-3.5 h-3.5" /> {listing.roommates_needed}

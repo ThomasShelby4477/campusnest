@@ -35,9 +35,16 @@ export default function SignupPage() {
     const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailValue }),
+      body: JSON.stringify({ email: emailValue, context: 'signup' }),
     })
     const data = await res.json()
+
+    if (res.status === 409 && data.error === 'user_exists') {
+      // User already registered — prompt them to log in
+      goToStep('already-exists' as typeof step)
+      return
+    }
+
     if (!res.ok) {
       toast.error(data.error || 'Failed to send OTP')
       return
@@ -106,13 +113,37 @@ export default function SignupPage() {
     goToStep('pending')
   }
 
-  const stepComponents = {
+  const stepComponents: Record<string, React.ReactNode> = {
     email: <EmailStep onSubmit={handleEmailSubmit} />,
     otp: <OtpStep email={email} onVerify={handleOtpVerify} onBack={() => goToStep('email')} />,
     role: <RoleStep onSelect={handleRoleSelect} />,
     profile: <ProfileStep onComplete={handleProfileComplete} />,
     'id-upload': <IdUploadStep onUploaded={handleIdUploaded} />,
     pending: <PendingStep />,
+    'already-exists': (
+      <div className="bg-white rounded-2xl border border-border-light shadow-sm p-8 text-center space-y-4">
+        <div className="w-16 h-16 bg-coral/10 rounded-full flex items-center justify-center mx-auto">
+          <span className="text-3xl">👋</span>
+        </div>
+        <h2 className="text-xl font-bold text-text-primary">Welcome back!</h2>
+        <p className="text-text-muted text-sm leading-relaxed">
+          An account with <span className="font-semibold text-navy">{email}</span> already exists.
+          Please log in instead.
+        </p>
+        <Link
+          href={`/login`}
+          className="block w-full py-3 bg-coral text-white rounded-xl font-semibold text-sm hover:bg-coral-dark transition-colors"
+        >
+          Go to Login →
+        </Link>
+        <button
+          onClick={() => goToStep('email')}
+          className="text-sm text-text-muted hover:text-navy transition-colors"
+        >
+          Use a different email
+        </button>
+      </div>
+    ),
   }
 
   const stepIndex = ['email', 'otp', 'role', 'profile', 'id-upload', 'pending'].indexOf(step)

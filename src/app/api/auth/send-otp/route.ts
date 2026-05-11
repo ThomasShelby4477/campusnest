@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const ALLOWED_DOMAIN = process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN || 'nfsu.ac.in'
 
@@ -11,6 +12,7 @@ const schema = z.object({
     .refine((e) => e.endsWith(`@${ALLOWED_DOMAIN}`), {
       message: `Only @${ALLOWED_DOMAIN} email addresses are allowed`,
     }),
+  context: z.enum(['signup', 'login']).default('login'),
 })
 
 export async function POST(request: NextRequest) {
@@ -23,13 +25,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errors[0] }, { status: 422 })
     }
 
-    const { email } = result.data
+    const { email, context } = result.data
+
+    // For signup: check if user already exists → tell them to log in instead
+    if (context === 'signup') {
+      const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email)
+      if (existingUser?.user) {
+        return NextResponse.json(
+          { error: 'user_exists', message: 'An account with this email already exists.' },
+          { status: 409 }
+        )
+      }
+    }
+
     const supabase = await createClient()
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: true,
+        shouldCreateUser: context === 'signup',
       },
     })
 

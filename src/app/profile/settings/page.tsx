@@ -1,16 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuthStore } from '@/stores/auth-store'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AlertTriangle, Trash2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
-  const { user, signOut } = useAuthStore()
   const supabase = createClient()
   const router = useRouter()
 
@@ -35,8 +33,8 @@ export default function SettingsPage() {
         return
       }
 
-      await signOut()
-      toast.success('Account successfully deleted')
+      await supabase.auth.signOut()
+      toast.success('Account deleted')
       router.push('/')
     }
   }

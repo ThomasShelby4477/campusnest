@@ -14,7 +14,7 @@ import Link from 'next/link'
 import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { user, setUser, signOut } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
@@ -67,7 +67,10 @@ export default function ProfilePage() {
   }
 
   const handleLogout = async () => {
-    await signOut()
+    // Per Supabase docs: call signOut on the browser client.
+    // createBrowserClient (@supabase/ssr) clears auth cookies automatically.
+    // onAuthStateChange('SIGNED_OUT') in providers.tsx then calls setUser(null).
+    await supabase.auth.signOut()
     router.push('/login')
   }
 

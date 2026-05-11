@@ -181,13 +181,13 @@ function SearchContent() {
           {listings.map(l => (
             <div
               key={l.id}
-              onClick={() => handleSelectListing(l)}
-              className={`cursor-pointer rounded-xl transition-all ${selectedListing?.id === l.id ? 'ring-2 ring-coral' : ''}`}
+              className={`rounded-xl transition-all ${selectedListing?.id === l.id ? 'ring-2 ring-coral' : ''}`}
             >
               <ListingCard
                 listing={l}
                 currentUserId={user?.id}
                 initialSaved={savedListingIds.has(l.id)}
+                onSelect={() => handleSelectListing(l)}
               />
             </div>
           ))}
@@ -233,13 +233,23 @@ function SearchContent() {
       {/* ── MOBILE layout ────────────────────────────────── */}
       <div className="flex lg:hidden flex-col w-full h-full">
         {/* Toggle bar */}
-        <div className="bg-white border-b border-border-light flex px-4 py-2 gap-2 shrink-0">
-          <Button size="sm" variant={viewMode === 'list' ? 'default' : 'outline'} className="flex-1 gap-1.5" onClick={() => setViewMode('list')}>
+        <div className="bg-white border-b border-border-light flex shrink-0">
+          <button
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              viewMode === 'list' ? 'border-coral text-coral' : 'border-transparent text-text-muted'
+            }`}
+            onClick={() => setViewMode('list')}
+          >
             <LayoutGrid className="w-4 h-4" /> List
-          </Button>
-          <Button size="sm" variant={viewMode === 'map' ? 'default' : 'outline'} className="flex-1 gap-1.5" onClick={() => setViewMode('map')}>
+          </button>
+          <button
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              viewMode === 'map' ? 'border-coral text-coral' : 'border-transparent text-text-muted'
+            }`}
+            onClick={() => setViewMode('map')}
+          >
             <MapIcon className="w-4 h-4" /> Map
-          </Button>
+          </button>
         </div>
 
         {viewMode === 'map' ? (

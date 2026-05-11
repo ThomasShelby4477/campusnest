@@ -9,12 +9,14 @@ import { toast } from 'sonner'
 
 interface ListingCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  listing: any // Using any for simplicity here, matches joined Supabase output
+  listing: any
   currentUserId?: string
   initialSaved?: boolean
+  /** When provided, card click calls this instead of navigating to the detail page */
+  onSelect?: () => void
 }
 
-export function ListingCard({ listing, currentUserId, initialSaved = false }: ListingCardProps) {
+export function ListingCard({ listing, currentUserId, initialSaved = false, onSelect }: ListingCardProps) {
   const [isSaved, setIsSaved] = useState(initialSaved)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const primaryImage = listing.listing_images?.find((img: any) => img.is_primary)?.url 
@@ -54,9 +56,8 @@ export function ListingCard({ listing, currentUserId, initialSaved = false }: Li
     }
   }
 
-  return (
-    <Link href={`/listings/${listing.id}`} className="group block">
-      <div className="bg-white rounded-xl border border-border-light overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+  const inner = (
+    <div className="bg-white rounded-xl border border-border-light overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
         {/* Image Container */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted-bg">
           <Image
@@ -126,6 +127,20 @@ export function ListingCard({ listing, currentUserId, initialSaved = false }: Li
           </div>
         </div>
       </div>
+    </div>
+  )
+
+  if (onSelect) {
+    return (
+      <div className="group block cursor-pointer" onClick={onSelect}>
+        {inner}
+      </div>
+    )
+  }
+
+  return (
+    <Link href={`/listings/${listing.id}`} className="group block">
+      {inner}
     </Link>
   )
 }

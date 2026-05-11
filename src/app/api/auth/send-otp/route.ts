@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
 
     // For signup: check if user already exists → tell them to log in instead
     if (context === 'signup') {
-      const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email)
-      if (existingUser?.user) {
+      const { data: exists } = await supabaseAdmin.rpc('user_exists_by_email', { user_email: email })
+      if (exists) {
         return NextResponse.json(
           { error: 'user_exists', message: 'An account with this email already exists.' },
           { status: 409 }

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useListingStore } from '@/stores/listing-store'
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { MapPin } from 'lucide-react'
 
 const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 23.2156
@@ -80,24 +80,25 @@ export function LocationStep({ onNext, onBack }: Props) {
               Google Maps API Key missing in environment variables.
             </div>
           ) : (
-            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
               <Map
+                mapId="campusnest-location-picker"
                 defaultCenter={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}
                 defaultZoom={13}
                 onClick={handleMapClick}
                 gestureHandling="greedy"
                 disableDefaultUI={true}
               >
-                {store.latitude && store.longitude && (
-                  <Marker position={{ lat: store.latitude, lng: store.longitude }} />
+                {/* Selected location marker */}
+                {store.latitude != null && store.longitude != null && (
+                  <AdvancedMarker position={{ lat: store.latitude, lng: store.longitude }}>
+                    <Pin background="#E8593C" borderColor="#E8593C" glyphColor="white" />
+                  </AdvancedMarker>
                 )}
-                <Marker 
-                  position={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }} 
-                  icon={{
-                    url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                  }}
-                  title="NFSU Campus"
-                />
+                {/* Campus reference marker */}
+                <AdvancedMarker position={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}>
+                  <Pin background="#1E3A5F" borderColor="#1E3A5F" glyphColor="white" />
+                </AdvancedMarker>
               </Map>
             </APIProvider>
           )}

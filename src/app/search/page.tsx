@@ -8,12 +8,13 @@ import { ListingCard } from '@/components/listing-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { SlidersHorizontal, Map as MapIcon, LayoutGrid } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 
 const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 23.2156
 const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 72.6369
+const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
 function SearchContent() {
   const router = useRouter()
@@ -113,30 +114,39 @@ function SearchContent() {
       {/* Map Panel (Desktop 55vw, Mobile full conditionally) */}
       {(viewMode === 'both' || viewMode === 'map') && (
         <div className={`h-full ${viewMode === 'both' ? 'w-[55vw]' : 'w-full'} relative bg-border-light hidden lg:block lg:w-[55vw]`}>
-          {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
+          {!MAPS_API_KEY ? (
             <div className="w-full h-full flex items-center justify-center p-8 text-center text-text-muted">
               Map requires Google Maps API Key
             </div>
           ) : (
-            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+            <APIProvider apiKey={MAPS_API_KEY}>
               <Map
+                mapId="campusnest-search"
                 defaultCenter={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}
                 defaultZoom={13}
                 gestureHandling="greedy"
                 disableDefaultUI={true}
               >
-                <Marker 
-                  position={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }} 
-                  title="NFSU Campus"
-                  icon="http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                />
-                {listings.map(l => (
-                  <Marker 
-                    key={l.id} 
-                    position={{ lat: l.latitude, lng: l.longitude }}
-                    title={`₹${l.rent}`}
-                  />
-                ))}
+                {/* Campus marker */}
+                <AdvancedMarker position={{ lat: CAMPUS_LAT, lng: CAMPUS_LNG }}>
+                  <Pin background="#1E3A5F" borderColor="#1E3A5F" glyphColor="white" />
+                </AdvancedMarker>
+
+                {/* Listing markers — guard against null lat/lng */}
+                {listings
+                  .filter(l => l.latitude != null && l.longitude != null)
+                  .map(l => (
+                    <AdvancedMarker
+                      key={l.id}
+                      position={{ lat: l.latitude, lng: l.longitude }}
+                      title={`₹${l.rent}/mo`}
+                    >
+                      <div className="bg-coral text-white text-xs font-bold px-2 py-1 rounded-full shadow-md whitespace-nowrap">
+                        ₹{l.rent}
+                      </div>
+                    </AdvancedMarker>
+                  ))
+                }
               </Map>
             </APIProvider>
           )}

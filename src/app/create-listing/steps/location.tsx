@@ -9,8 +9,8 @@ import { useListingStore } from '@/stores/listing-store'
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { MapPin } from 'lucide-react'
 
-const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 23.2156
-const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 72.6369
+const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 28.696377
+const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 77.109743
 
 interface Props {
   onNext: () => void

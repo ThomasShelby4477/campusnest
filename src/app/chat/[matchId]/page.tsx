@@ -16,6 +16,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
 export default function ChatPage({ params }: { params: Promise<{ matchId: string }> }) {
@@ -34,6 +40,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   const [closing, setClosing] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
   const [closedBy, setClosedBy] = useState<string | null>(null)
+  const [showProfileDialog, setShowProfileDialog] = useState(false)
   const [initialUnreadIds, setInitialUnreadIds] = useState<Set<string>>(new Set())
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -223,19 +230,24 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
           <Button variant="ghost" size="icon" onClick={() => router.push('/chats')} className="-ml-2">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-navy/5 shrink-0">
-            {otherUser?.avatar_url ? (
-              <Image src={otherUser.avatar_url} alt={otherUser.name} fill className="object-cover" />
-            ) : (
-              <UserCircle2 className="w-full h-full text-text-muted" />
-            )}
-          </div>
-          <div>
-            <h2 className="font-bold text-text-primary leading-tight">{otherUser?.name}</h2>
-            <p className="text-xs text-text-muted font-medium">
-              {chatType === 'LISTING' ? 'Listing Inquiry' : chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'}
-            </p>
-          </div>
+          <button 
+            onClick={() => setShowProfileDialog(true)}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
+          >
+            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-navy/5 shrink-0">
+              {otherUser?.avatar_url ? (
+                <Image src={otherUser.avatar_url} alt={otherUser.name || 'User'} fill className="object-cover" />
+              ) : (
+                <UserCircle2 className="w-full h-full text-text-muted" />
+              )}
+            </div>
+            <div>
+              <h2 className="font-bold text-text-primary leading-tight">{otherUser?.name || 'User'}</h2>
+              <p className="text-xs text-text-muted font-medium">
+                {chatType === 'LISTING' ? 'Listing Inquiry' : chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'}
+              </p>
+            </div>
+          </button>
         </div>
         {!isClosed && (
           <Button
@@ -390,6 +402,60 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Profile Dialog */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>User Profile</DialogTitle>
+          </DialogHeader>
+          {otherUser && (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="relative w-24 h-24 rounded-full overflow-hidden bg-muted-bg border-4 border-white shadow-sm shrink-0">
+                {otherUser.avatar_url ? (
+                  <Image src={otherUser.avatar_url} alt={otherUser.name || 'User'} fill className="object-cover" />
+                ) : (
+                  <UserCircle2 className="w-full h-full text-text-muted p-2" />
+                )}
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-navy">{otherUser.name || 'User'}</h3>
+                {otherUser.role && (
+                  <p className="text-sm font-medium text-coral uppercase tracking-wide mt-1">
+                    {otherUser.role}
+                  </p>
+                )}
+              </div>
+              <div className="w-full space-y-3 mt-2 bg-muted-bg p-4 rounded-xl border border-border-light text-sm">
+                {otherUser.gender && (
+                  <div className="flex justify-between items-center border-b border-border-light pb-2">
+                    <span className="text-text-muted">Gender</span>
+                    <span className="font-medium capitalize">{otherUser.gender.toLowerCase()}</span>
+                  </div>
+                )}
+                {otherUser.branch && (
+                  <div className="flex justify-between items-center border-b border-border-light pb-2">
+                    <span className="text-text-muted">Branch</span>
+                    <span className="font-medium">{otherUser.branch}</span>
+                  </div>
+                )}
+                {otherUser.year && (
+                  <div className="flex justify-between items-center border-b border-border-light pb-2">
+                    <span className="text-text-muted">Year</span>
+                    <span className="font-medium">Year {otherUser.year}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Verified Status</span>
+                  <span className={`font-semibold ${otherUser.verified_status === 'VERIFIED' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {otherUser.verified_status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { NotificationsBell } from './notifications-bell'
+import { ChatsBadge } from './chats-badge'
 import { useAuthStore } from '@/stores/auth-store'
-import { Search, MessageSquare, Heart, User } from 'lucide-react'
+import { Search, Heart, User } from 'lucide-react'
 
 export function Navbar() {
   const pathname = usePathname()
@@ -34,7 +35,7 @@ export function Navbar() {
           {user ? (
             <div className="flex items-center gap-4">
               <Link href="/search" className={`text-sm font-bold hidden sm:block transition-colors ${isActive('/search') ? 'text-navy' : 'text-text-muted hover:text-navy'}`}>Search</Link>
-              <Link href="/chats" className={`text-sm font-bold hidden sm:block transition-colors ${isActive('/chats') ? 'text-navy' : 'text-text-muted hover:text-navy'}`}>Chats</Link>
+              <ChatsBadge variant="desktop" />
               <Link href="/saved" className={`text-sm font-bold hidden sm:block transition-colors ${isActive('/saved') ? 'text-navy' : 'text-text-muted hover:text-navy'}`}>Saved</Link>
               <Link href="/my-listings" className={`text-sm font-bold hidden sm:block transition-colors ${isActive('/my-listings') ? 'text-navy' : 'text-text-muted hover:text-navy'}`}>My Listings</Link>
               
@@ -66,10 +67,7 @@ export function Navbar() {
             <Search className="w-5 h-5" />
             <span className="text-[10px] font-bold">Search</span>
           </Link>
-          <Link href="/chats" className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-colors ${isActive('/chats') ? 'text-coral' : 'text-text-muted'}`}>
-            <MessageSquare className="w-5 h-5" />
-            <span className="text-[10px] font-bold">Chats</span>
-          </Link>
+          <ChatsBadge variant="mobile" />
           <Link href="/saved" className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-colors ${isActive('/saved') ? 'text-coral' : 'text-text-muted'}`}>
             <Heart className="w-5 h-5" />
             <span className="text-[10px] font-bold">Saved</span>

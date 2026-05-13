@@ -32,6 +32,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   const [chatType, setChatType] = useState('ROOMMATE')
   const [showCloseDialog, setShowCloseDialog] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [initialUnreadIds, setInitialUnreadIds] = useState<Set<string>>(new Set())
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -84,10 +85,14 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       .limit(50)
 
     if (initialMessages) {
-      setMessages(initialMessages.reverse())
-      const unreadIds = initialMessages.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id)
+      const reversed = initialMessages.reverse()
+      // Save unread IDs before marking them read so we can show the divider
+      const unreadIds = reversed.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id)
+      setInitialUnreadIds(new Set(unreadIds))
+      setMessages(reversed)
       if (unreadIds.length > 0) {
-        await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
+        // Mark as read in background
+        supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
       }
     }
 
@@ -217,20 +222,44 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
           </p>
         </div>
 
-        {messages.map((msg) => {
+        {messages.map((msg, idx) => {
           const isMine = msg.sender_id === currentUser?.id
+          const isUnread = initialUnreadIds.has(msg.id)
+          // Show divider before the first unread message from the other person
+          const showUnreadDivider =
+            isUnread &&
+            !isMine &&
+            (idx === 0 || !initialUnreadIds.has(messages[idx - 1]?.id))
+
           return (
-            <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${isMine ? 'bg-navy text-white rounded-br-sm' : 'bg-white border border-border-light text-text-primary rounded-bl-sm'}`}>
-                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
-              </div>
-              <div className="flex items-center gap-1 mt-1 text-[10px] text-text-muted font-medium px-1">
-                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                {isMine && (
-                  <span className={msg.is_read ? 'text-coral' : 'text-text-muted/50'}>
-                    ✓{msg.is_read && '✓'}
+            <div key={msg.id}>
+              {showUnreadDivider && (
+                <div className="flex items-center gap-3 py-2 mb-2">
+                  <div className="flex-1 h-px bg-coral/30" />
+                  <span className="text-xs font-bold text-coral whitespace-nowrap">
+                    {initialUnreadIds.size} unread message{initialUnreadIds.size !== 1 ? 's' : ''}
                   </span>
-                )}
+                  <div className="flex-1 h-px bg-coral/30" />
+                </div>
+              )}
+              <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                  isMine
+                    ? 'bg-navy text-white rounded-br-sm'
+                    : isUnread
+                      ? 'bg-coral/5 border border-coral/20 text-text-primary rounded-bl-sm'
+                      : 'bg-white border border-border-light text-text-primary rounded-bl-sm'
+                }`}>
+                  <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                </div>
+                <div className="flex items-center gap-1 mt-1 text-[10px] text-text-muted font-medium px-1">
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {isMine && (
+                    <span className={msg.is_read ? 'text-coral' : 'text-text-muted/50'}>
+                      ✓{msg.is_read && '✓'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )

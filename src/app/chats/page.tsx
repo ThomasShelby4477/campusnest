@@ -55,7 +55,19 @@ export default function ChatsPage() {
 
         const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
         const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
-        const otherUser = match.user_a_id === userId ? uB : uA
+        let otherUser = match.user_a_id === userId ? uB : uA
+
+        // RLS fallback: if the join returned null, fetch via server API
+        if (!otherUser || !otherUser.id) {
+          const otherId = match.user_a_id === userId ? match.user_b_id : match.user_a_id
+          try {
+            const res = await fetch(`/api/users/${otherId}`)
+            if (res.ok) {
+              const { profile } = await res.json()
+              otherUser = profile
+            }
+          } catch { /* ignore */ }
+        }
 
         return {
           ...match,

@@ -94,8 +94,30 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     setChatType(match.chat_type)
     const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
     const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
-    setOtherUser(match.user_a_id === user.id ? uB : uA)
-    setMyProfile(match.user_a_id === user.id ? uA : uB)
+    const otherUserId = match.user_a_id === user.id ? match.user_b_id : match.user_a_id
+    let other = match.user_a_id === user.id ? uB : uA
+    let mine = match.user_a_id === user.id ? uA : uB
+
+    // RLS fallback: if the join returned null for the other user's profile,
+    // fetch it directly via the server-side API which uses the service role key
+    if (!other || !other.id) {
+      const res = await fetch(`/api/users/${otherUserId}`)
+      if (res.ok) {
+        const { profile } = await res.json()
+        other = profile
+      }
+    }
+    // Same fallback for own profile
+    if (!mine || !mine.id) {
+      const res = await fetch(`/api/users/${user.id}`)
+      if (res.ok) {
+        const { profile } = await res.json()
+        mine = profile
+      }
+    }
+
+    setOtherUser(other)
+    setMyProfile(mine)
 
     const { data: initialMessages } = await supabase
       .from('messages')

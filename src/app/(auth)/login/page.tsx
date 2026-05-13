@@ -47,7 +47,7 @@ function LoginContent() {
     const res = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, token }),
+      body: JSON.stringify({ email, token, redirect }),
     })
 
     const data = await res.json()
@@ -67,7 +67,7 @@ function LoginContent() {
     }
 
     toast.success('Welcome back!')
-    router.push(data.redirectTo)
+    router.push(data.redirectTo || redirect)
   }
 
   return (

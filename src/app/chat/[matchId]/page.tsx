@@ -32,6 +32,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   const [chatType, setChatType] = useState('ROOMMATE')
   const [showCloseDialog, setShowCloseDialog] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [isClosed, setIsClosed] = useState(false)
   const [initialUnreadIds, setInitialUnreadIds] = useState<Set<string>>(new Set())
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -67,11 +68,9 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       return
     }
 
-    // If chat is closed, redirect
+    // If chat is closed, show in read-only mode
     if (match.is_closed) {
-      toast.error('This chat has been closed')
-      router.push('/chats')
-      return
+      setIsClosed(true)
     }
 
     setChatType(match.chat_type)
@@ -97,34 +96,52 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
     setLoading(false)
 
-    const channel = supabase.channel(`match:${matchId}`)
-    channel.on(
+    // Only subscribe to realtime if chat is still open
+    if (!match.is_closed) {
+      const channel = supabase.channel(`match:${matchId}`)
+      channel.on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
+        (payload) => {
+          setMessages(prev => [...prev, payload.new])
+          if (payload.new.sender_id !== user.id && document.hasFocus()) {
+            supabase.from('messages').update({ is_read: true }).eq('id', payload.new.id)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
+        (payload) => {
+          setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
+        }
+      )
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.user_id !== user.id) {
+          setIsTyping(true)
+          clearTimeout(typingTimer)
+          typingTimer = setTimeout(() => setIsTyping(false), 2000)
+        }
+      })
+      .subscribe()
+    }
+
+    // Subscribe to match changes so we detect if the other user closes the chat
+    const matchChannel = supabase.channel(`match-status:${matchId}`)
+    matchChannel.on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
+      { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
       (payload) => {
-        setMessages(prev => [...prev, payload.new])
-        if (payload.new.sender_id !== user.id && document.hasFocus()) {
-          supabase.from('messages').update({ is_read: true }).eq('id', payload.new.id)
+        if (payload.new.is_closed) {
+          setIsClosed(true)
         }
       }
     )
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
-      (payload) => {
-        setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
-      }
-    )
-    .on('broadcast', { event: 'typing' }, ({ payload }) => {
-      if (payload.user_id !== user.id) {
-        setIsTyping(true)
-        clearTimeout(typingTimer)
-        typingTimer = setTimeout(() => setIsTyping(false), 2000)
-      }
-    })
     .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      supabase.removeAllChannels()
+    }
   }
 
   const handleTyping = () => {
@@ -163,7 +180,8 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     }
 
     toast.success('Chat closed permanently')
-    router.push('/chats')
+    setIsClosed(true)
+    setShowCloseDialog(false)
   }
 
   if (loading) {
@@ -192,15 +210,17 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-text-muted hover:text-danger"
-          onClick={() => setShowCloseDialog(true)}
-          title="Close chat permanently"
-        >
-          <XCircle className="w-5 h-5" />
-        </Button>
+        {!isClosed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-text-muted hover:text-danger"
+            onClick={() => setShowCloseDialog(true)}
+            title="Close chat permanently"
+          >
+            <XCircle className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -276,35 +296,44 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
         <div ref={bottomRef} className="h-1" />
       </div>
 
-      {/* Input */}
-      <div className="bg-white border-t border-border-light p-3 sm:p-4 shrink-0">
-        <form onSubmit={sendMessage} className="flex items-end gap-2 max-w-3xl mx-auto relative">
-          <textarea
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              handleTyping()
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                sendMessage(e)
-              }
-            }}
-            placeholder="Type a message..."
-            className="w-full bg-muted-bg border border-border-light rounded-2xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-1 focus:ring-navy resize-none min-h-[44px] max-h-32 custom-scrollbar"
-            rows={1}
-            style={{ height: input ? 'auto' : '44px' }}
-          />
-          <Button
-            type="submit"
-            disabled={!input.trim()}
-            className="absolute right-2 bottom-1.5 w-8 h-8 rounded-full bg-coral hover:bg-coral-dark p-0 flex items-center justify-center shrink-0 disabled:opacity-50"
-          >
-            <Send className="w-4 h-4 text-white ml-0.5" />
-          </Button>
-        </form>
-      </div>
+      {/* Input or Closed Banner */}
+      {isClosed ? (
+        <div className="bg-muted-bg border-t border-border-light p-4 shrink-0">
+          <div className="flex items-center justify-center gap-2 text-text-muted text-sm font-medium py-2">
+            <XCircle className="w-4 h-4 text-danger" />
+            <span>This chat has been permanently closed. Messages are read-only.</span>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white border-t border-border-light p-3 sm:p-4 shrink-0">
+          <form onSubmit={sendMessage} className="flex items-end gap-2 max-w-3xl mx-auto relative">
+            <textarea
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value)
+                handleTyping()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage(e)
+                }
+              }}
+              placeholder="Type a message..."
+              className="w-full bg-muted-bg border border-border-light rounded-2xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-1 focus:ring-navy resize-none min-h-[44px] max-h-32 custom-scrollbar"
+              rows={1}
+              style={{ height: input ? 'auto' : '44px' }}
+            />
+            <Button
+              type="submit"
+              disabled={!input.trim()}
+              className="absolute right-2 bottom-1.5 w-8 h-8 rounded-full bg-coral hover:bg-coral-dark p-0 flex items-center justify-center shrink-0 disabled:opacity-50"
+            >
+              <Send className="w-4 h-4 text-white ml-0.5" />
+            </Button>
+          </form>
+        </div>
+      )}
 
       {/* Close Chat Dialog */}
       <AlertDialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>

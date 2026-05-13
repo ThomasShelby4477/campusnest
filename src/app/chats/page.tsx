@@ -22,7 +22,7 @@ export default function ChatsPage() {
     const { data: matches, error } = await supabase
       .from('matches')
       .select(`
-        id, chat_type, created_at,
+        id, chat_type, created_at, is_closed,
         user_a:profiles!matches_user_a_id_fkey ( id, name, avatar_url ),
         user_b:profiles!matches_user_b_id_fkey ( id, name, avatar_url )
       `)
@@ -147,10 +147,12 @@ export default function ChatsPage() {
             {chats.map((chat, i) => {
               const other = chat.otherUser
               const last = chat.lastMessage
-              const hasUnread = chat.unreadCount > 0
+              const hasUnread = !chat.is_closed && chat.unreadCount > 0
               const isMineLastMsg = last?.sender_id === currentUserId
+              const closed = chat.is_closed
 
               const typeLabel =
+                closed ? 'Closed' :
                 chat.chat_type === 'LISTING' ? 'Listing' :
                 chat.chat_type === 'BUDDY' ? 'Buddy' : 'Roommate'
 
@@ -160,7 +162,7 @@ export default function ChatsPage() {
                   href={`/chat/${chat.id}`}
                   className={`flex items-center gap-3 p-4 hover:bg-muted-bg/50 transition-colors ${
                     i < chats.length - 1 ? 'border-b border-border-light' : ''
-                  } ${hasUnread ? 'bg-coral/[0.03]' : ''}`}
+                  } ${hasUnread ? 'bg-coral/[0.03]' : ''} ${closed ? 'opacity-60' : ''}`}
                 >
                   {/* Avatar */}
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted-bg shrink-0 border border-border-light">
@@ -182,7 +184,9 @@ export default function ChatsPage() {
                         {other?.name || 'User'}
                       </h3>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-semibold text-text-muted bg-muted-bg px-1.5 py-0.5 rounded">
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                          closed ? 'text-danger bg-danger/10' : 'text-text-muted bg-muted-bg'
+                        }`}>
                           {typeLabel}
                         </span>
                         <span className={`text-[11px] shrink-0 ${hasUnread ? 'text-coral font-semibold' : 'text-text-muted'}`}>

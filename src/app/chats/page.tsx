@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { MessageSquare, UserCircle2 } from 'lucide-react'
+import { MessageSquare, UserCircle2, Check, CheckCheck } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 
 export default function ChatsPage() {
@@ -13,38 +13,28 @@ export default function ChatsPage() {
   const [chats, setChats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
-  useEffect(() => {
-    initChats()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const initChats = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login?redirect=/chats')
-      return
-    }
-    setCurrentUser(user)
-
-    // Fetch all matches this user is part of, not closed
+  const fetchChats = useCallback(async (userId: string) => {
+    // Fetch all matches this user is part of
     const { data: matches, error } = await supabase
       .from('matches')
       .select(`
-        id, chat_type, created_at, is_closed,
+        id, chat_type, created_at,
         user_a:profiles!matches_user_a_id_fkey ( id, name, avatar_url ),
         user_b:profiles!matches_user_b_id_fkey ( id, name, avatar_url )
       `)
-      .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
-      .neq('is_closed', true)
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
       .order('created_at', { ascending: false })
 
-    if (error) console.error('chats fetch error:', error)
+    if (error) {
+      console.error('chats fetch error:', error)
+      return []
+    }
 
-    // For each match, fetch the last message
+    // For each match, fetch the last message + unread count
     const chatsWithMessages = await Promise.all(
       (matches || []).map(async (match) => {
         const { data: lastMsg } = await supabase
@@ -55,15 +45,16 @@ export default function ChatsPage() {
           .limit(1)
           .single()
 
-        // Count unread
+        // Count unread messages (messages from the OTHER person that I haven't read)
         const { count: unread } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('match_id', match.id)
           .eq('is_read', false)
-          .neq('sender_id', user.id)
+          .neq('sender_id', userId)
 
-        const otherUser = (match as any).user_a?.id === user.id ? match.user_b : match.user_a
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const otherUser = (match as any).user_a?.id === userId ? match.user_b : match.user_a
 
         return {
           ...match,
@@ -81,9 +72,43 @@ export default function ChatsPage() {
       return new Date(bTime).getTime() - new Date(aTime).getTime()
     })
 
-    setChats(chatsWithMessages)
-    setLoading(false)
-  }
+    return chatsWithMessages
+  }, [supabase])
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login?redirect=/chats')
+        return
+      }
+      setCurrentUserId(user.id)
+
+      const data = await fetchChats(user.id)
+      setChats(data)
+      setLoading(false)
+
+      // Subscribe to message changes to update unread counts in realtime
+      const channel = supabase.channel('chats-list-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'messages' },
+          async () => {
+            // Re-fetch chats to get updated unread counts & last messages
+            const updated = await fetchChats(user.id)
+            setChats(updated)
+          }
+        )
+        .subscribe()
+
+      return () => { supabase.removeChannel(channel) }
+    }
+
+    let cleanup: (() => void) | undefined
+    init().then(c => { cleanup = c })
+    return () => { cleanup?.() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (loading) {
     return (
@@ -92,6 +117,8 @@ export default function ChatsPage() {
       </div>
     )
   }
+
+  const totalUnread = chats.reduce((sum, c) => sum + c.unreadCount, 0)
 
   return (
     <div className="min-h-screen bg-muted-bg pb-20 sm:pb-8">
@@ -102,7 +129,10 @@ export default function ChatsPage() {
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Chats</h1>
-            <p className="text-text-muted mt-0.5 text-sm">{chats.length} conversation{chats.length !== 1 ? 's' : ''}</p>
+            <p className="text-text-muted mt-0.5 text-sm">
+              {chats.length} conversation{chats.length !== 1 ? 's' : ''}
+              {totalUnread > 0 && <span className="text-coral font-semibold"> · {totalUnread} unread</span>}
+            </p>
           </div>
         </div>
 
@@ -118,6 +148,7 @@ export default function ChatsPage() {
               const other = chat.otherUser
               const last = chat.lastMessage
               const hasUnread = chat.unreadCount > 0
+              const isMineLastMsg = last?.sender_id === currentUserId
 
               const typeLabel =
                 chat.chat_type === 'LISTING' ? 'Listing' :
@@ -129,7 +160,7 @@ export default function ChatsPage() {
                   href={`/chat/${chat.id}`}
                   className={`flex items-center gap-3 p-4 hover:bg-muted-bg/50 transition-colors ${
                     i < chats.length - 1 ? 'border-b border-border-light' : ''
-                  } ${hasUnread ? 'bg-navy/[0.03]' : ''}`}
+                  } ${hasUnread ? 'bg-coral/[0.03]' : ''}`}
                 >
                   {/* Avatar */}
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted-bg shrink-0 border border-border-light">
@@ -137,6 +168,10 @@ export default function ChatsPage() {
                       <Image src={other.avatar_url} alt={other.name || ''} fill className="object-cover" />
                     ) : (
                       <UserCircle2 className="w-full h-full text-text-muted p-1" />
+                    )}
+                    {/* Online-style unread dot */}
+                    {hasUnread && (
+                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-coral border-2 border-white" />
                     )}
                   </div>
 
@@ -146,30 +181,38 @@ export default function ChatsPage() {
                       <h3 className={`font-bold truncate ${hasUnread ? 'text-navy' : 'text-text-primary'}`}>
                         {other?.name || 'User'}
                       </h3>
-                      <span className="text-[11px] text-text-muted shrink-0">
-                        {last?.created_at
-                          ? formatRelativeTime(last.created_at)
-                          : formatRelativeTime(chat.created_at)
-                        }
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <p className={`text-sm truncate ${hasUnread ? 'text-text-primary font-medium' : 'text-text-muted'}`}>
-                        {last?.content
-                          ? (last.sender_id === currentUser?.id ? `You: ${last.content}` : last.content)
-                          : 'No messages yet'
-                        }
-                      </p>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[10px] font-semibold text-text-muted bg-muted-bg px-1.5 py-0.5 rounded">
                           {typeLabel}
                         </span>
-                        {hasUnread && (
-                          <span className="w-5 h-5 rounded-full bg-coral text-white text-[10px] font-bold flex items-center justify-center">
-                            {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                          </span>
-                        )}
+                        <span className={`text-[11px] shrink-0 ${hasUnread ? 'text-coral font-semibold' : 'text-text-muted'}`}>
+                          {last?.created_at
+                            ? formatRelativeTime(last.created_at)
+                            : formatRelativeTime(chat.created_at)
+                          }
+                        </span>
                       </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        {/* Read receipt for your own messages */}
+                        {isMineLastMsg && last && (
+                          last.is_read
+                            ? <CheckCheck className="w-3.5 h-3.5 text-coral shrink-0" />
+                            : <Check className="w-3.5 h-3.5 text-text-muted/50 shrink-0" />
+                        )}
+                        <p className={`text-sm truncate ${hasUnread ? 'text-text-primary font-medium' : 'text-text-muted'}`}>
+                          {last?.content
+                            ? (isMineLastMsg ? `You: ${last.content}` : last.content)
+                            : 'No messages yet'
+                          }
+                        </p>
+                      </div>
+                      {hasUnread && (
+                        <span className="w-5 h-5 rounded-full bg-coral text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Link>

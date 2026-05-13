@@ -22,7 +22,7 @@ export default function ChatsPage() {
     const { data: matches, error } = await supabase
       .from('matches')
       .select(`
-        id, chat_type, created_at, is_closed,
+        id, chat_type, created_at, is_closed, user_a_id, user_b_id,
         user_a:profiles!matches_user_a_id_fkey ( id, name, avatar_url ),
         user_b:profiles!matches_user_b_id_fkey ( id, name, avatar_url )
       `)
@@ -55,7 +55,7 @@ export default function ChatsPage() {
 
         const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
         const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
-        const otherUser = uA?.id === userId ? uB : uA
+        const otherUser = match.user_a_id === userId ? uB : uA
 
         return {
           ...match,

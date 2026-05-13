@@ -33,6 +33,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   const [showCloseDialog, setShowCloseDialog] = useState(false)
   const [closing, setClosing] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
+  const [closedBy, setClosedBy] = useState<string | null>(null)
   const [initialUnreadIds, setInitialUnreadIds] = useState<Set<string>>(new Set())
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -78,6 +79,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     // If chat is closed, show in read-only mode
     if (match.is_closed) {
       setIsClosed(true)
+      setClosedBy(match.closed_by)
     }
 
     setChatType(match.chat_type)
@@ -139,9 +141,8 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
       (payload) => {
-        if (payload.new.is_closed) {
-          setIsClosed(true)
-        }
+        setIsClosed(payload.new.is_closed)
+        setClosedBy(payload.new.closed_by)
       }
     )
     .subscribe()
@@ -177,7 +178,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     setClosing(true)
     const { error } = await supabase
       .from('matches')
-      .update({ is_closed: true })
+      .update({ is_closed: true, closed_by: currentUser.id })
       .eq('id', matchId)
 
     if (error) {
@@ -188,7 +189,26 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
     toast.success('Chat closed permanently')
     setIsClosed(true)
+    setClosedBy(currentUser.id)
     setShowCloseDialog(false)
+    setClosing(false)
+  }
+
+  const handleReopenChat = async () => {
+    setClosing(true)
+    const { error } = await supabase
+      .from('matches')
+      .update({ is_closed: false, closed_by: null })
+      .eq('id', matchId)
+
+    if (error) {
+      toast.error('Failed to reopen chat')
+      setClosing(false)
+      return
+    }
+
+    toast.success('Chat reopened')
+    window.location.reload()
   }
 
   if (loading) {
@@ -305,11 +325,16 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
       {/* Input or Closed Banner */}
       {isClosed ? (
-        <div className="bg-muted-bg border-t border-border-light p-4 shrink-0">
-          <div className="flex items-center justify-center gap-2 text-text-muted text-sm font-medium py-2">
+        <div className="bg-muted-bg border-t border-border-light p-4 shrink-0 flex flex-col items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-2 text-text-muted text-sm font-medium py-1">
             <XCircle className="w-4 h-4 text-danger" />
             <span>This chat has been permanently closed. Messages are read-only.</span>
           </div>
+          {closedBy === currentUser?.id && (
+            <Button variant="outline" size="sm" onClick={handleReopenChat} disabled={closing}>
+              {closing ? 'Reopening...' : 'Reopen Chat'}
+            </Button>
+          )}
         </div>
       ) : (
         <div className="bg-white border-t border-border-light p-3 sm:p-4 shrink-0">

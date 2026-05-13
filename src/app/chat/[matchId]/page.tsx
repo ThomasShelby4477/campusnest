@@ -91,8 +91,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       setInitialUnreadIds(new Set(unreadIds))
       setMessages(reversed)
       if (unreadIds.length > 0) {
-        // Mark as read in background
-        supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
+        await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
       }
     }
 

@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
     '/create-listing',
     '/roommates',
     '/chat',
+    '/chats',
     '/saved',
     '/notifications',
     '/my-listings',

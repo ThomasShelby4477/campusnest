@@ -4,19 +4,35 @@ import { useEffect, useState, useRef, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Send, UserCircle2, ArrowLeft, ShieldAlert } from 'lucide-react'
+import { Send, UserCircle2, ArrowLeft, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
 
 export default function ChatPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = use(params)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [otherUser, setOtherUser] = useState<any>(null)
   const [isTyping, setIsTyping] = useState(false)
   const [chatType, setChatType] = useState('ROOMMATE')
-  
+  const [showCloseDialog, setShowCloseDialog] = useState(false)
+  const [closing, setClosing] = useState(false)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const router = useRouter()
@@ -24,10 +40,10 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
   useEffect(() => {
     initChat()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    // Scroll to bottom on new messages
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
@@ -39,7 +55,6 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     }
     setCurrentUser(user)
 
-    // Verify match
     const { data: match } = await supabase
       .from('matches')
       .select('*, user_a:profiles!matches_user_a_id_fkey(*), user_b:profiles!matches_user_b_id_fkey(*)')
@@ -47,14 +62,20 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       .single()
 
     if (!match || (match.user_a_id !== user.id && match.user_b_id !== user.id)) {
-      router.push('/roommates')
+      router.push('/chats')
+      return
+    }
+
+    // If chat is closed, redirect
+    if (match.is_closed) {
+      toast.error('This chat has been closed')
+      router.push('/chats')
       return
     }
 
     setChatType(match.chat_type)
     setOtherUser(match.user_a_id === user.id ? match.user_b : match.user_a)
 
-    // Load messages
     const { data: initialMessages } = await supabase
       .from('messages')
       .select('*')
@@ -64,7 +85,6 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
     if (initialMessages) {
       setMessages(initialMessages.reverse())
-      // Mark as read
       const unreadIds = initialMessages.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id)
       if (unreadIds.length > 0) {
         await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
@@ -73,9 +93,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
     setLoading(false)
 
-    // Subscriptions
     const channel = supabase.channel(`match:${matchId}`)
-      
     channel.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
@@ -127,6 +145,23 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     })
   }
 
+  const handleCloseChat = async () => {
+    setClosing(true)
+    const { error } = await supabase
+      .from('matches')
+      .update({ is_closed: true })
+      .eq('id', matchId)
+
+    if (error) {
+      toast.error('Failed to close chat')
+      setClosing(false)
+      return
+    }
+
+    toast.success('Chat closed permanently')
+    router.push('/chats')
+  }
+
   if (loading) {
     return <div className="h-screen bg-muted-bg flex items-center justify-center"><span className="w-8 h-8 border-4 border-coral/30 border-t-coral rounded-full animate-spin"/></div>
   }
@@ -136,7 +171,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       {/* Header */}
       <div className="bg-white border-b border-border-light p-4 flex items-center justify-between shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/roommates')} className="-ml-2">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/chats')} className="-ml-2">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="relative w-10 h-10 rounded-full overflow-hidden bg-navy/5 shrink-0">
@@ -153,8 +188,14 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="text-text-muted hover:text-danger">
-          <ShieldAlert className="w-5 h-5" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-text-muted hover:text-danger"
+          onClick={() => setShowCloseDialog(true)}
+          title="Close chat permanently"
+        >
+          <XCircle className="w-5 h-5" />
         </Button>
       </div>
 
@@ -168,11 +209,15 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
               <UserCircle2 className="w-12 h-12 text-text-muted" />
             )}
           </div>
-          <h3 className="font-bold text-text-primary text-lg">You matched with {otherUser?.name}</h3>
-          <p className="text-sm text-text-muted mt-1">Start chatting to see if you&apos;re a good fit!</p>
+          <h3 className="font-bold text-text-primary text-lg">Chat with {otherUser?.name}</h3>
+          <p className="text-sm text-text-muted mt-1">
+            {chatType === 'LISTING'
+              ? 'Discuss the listing details and schedule a viewing.'
+              : 'Start chatting to see if you\'re a good fit!'}
+          </p>
         </div>
 
-        {messages.map((msg, i) => {
+        {messages.map((msg) => {
           const isMine = msg.sender_id === currentUser?.id
           return (
             <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
@@ -223,15 +268,39 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
             rows={1}
             style={{ height: input ? 'auto' : '44px' }}
           />
-          <Button 
-            type="submit" 
-            disabled={!input.trim()} 
+          <Button
+            type="submit"
+            disabled={!input.trim()}
             className="absolute right-2 bottom-1.5 w-8 h-8 rounded-full bg-coral hover:bg-coral-dark p-0 flex items-center justify-center shrink-0 disabled:opacity-50"
           >
             <Send className="w-4 h-4 text-white ml-0.5" />
           </Button>
         </form>
       </div>
+
+      {/* Close Chat Dialog */}
+      <AlertDialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-danger" /> Close Chat Permanently?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently close the chat with {otherUser?.name}. Neither of you will be able to send messages anymore. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCloseChat}
+              disabled={closing}
+              className="bg-danger hover:bg-danger/90 text-white"
+            >
+              {closing ? 'Closing...' : 'Close Chat'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

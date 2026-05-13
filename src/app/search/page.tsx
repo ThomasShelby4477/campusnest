@@ -13,8 +13,8 @@ import { EmptyState } from '@/components/empty-state'
 import { ListingCard } from '@/components/listing-card'
 import { ListingDetailPanel } from '@/components/listing-detail-panel'
 
-const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 28.696377
-const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 77.109743
+const CAMPUS_LAT = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LAT) || 23.2156
+const CAMPUS_LNG = Number(process.env.NEXT_PUBLIC_NFSU_CAMPUS_LNG) || 72.6369
 const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
 function SearchContent() {

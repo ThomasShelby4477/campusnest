@@ -45,8 +45,15 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const prevMessagesLength = useRef(0)
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (prevMessagesLength.current === 0 && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+    prevMessagesLength.current = messages.length
   }, [messages, isTyping])
 
   const initChat = async () => {

@@ -74,6 +74,10 @@ CREATE POLICY "Users can see own matches"
   ON matches FOR SELECT
   USING (user_a_id = auth.uid() OR user_b_id = auth.uid());
 
+CREATE POLICY "Match participants can update matches"
+  ON matches FOR UPDATE
+  USING (user_a_id = auth.uid() OR user_b_id = auth.uid());
+
 -- ── messages ────────────────────────────────────────────────
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 

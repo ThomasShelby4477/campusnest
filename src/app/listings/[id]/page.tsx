@@ -29,15 +29,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   // Check auth for contact button visibility
   const { data: { user } } = await supabase.auth.getUser()
-  let userVerified = false
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('verified_status')
-      .eq('id', user.id)
-      .single()
-    userVerified = profile?.verified_status === 'VERIFIED'
-  }
 
   // Increment views
   await supabase.rpc('increment_views', { listing_id: id })
@@ -194,8 +185,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
                 <ListingContactButton 
                   listingId={listing.id} 
-                  isVerified={userVerified}
                   isLoggedIn={!!user}
+                  isOwnListing={user?.id === listing.poster_id}
                 />
               </div>
 

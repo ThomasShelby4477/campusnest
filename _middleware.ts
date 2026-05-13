@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
     '/saved',
     '/notifications',
     '/my-listings',
+    '/interest-requests',
     '/profile',
   ]
   const adminPaths = ['/admin']

@@ -194,6 +194,7 @@ export default function ProfilePage() {
         <div className="bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm mb-6">
           {[
             { label: 'My Listings', href: '/my-listings', icon: '🏠' },
+            { label: 'Interest Requests', href: '/interest-requests', icon: '🤝' },
             { label: 'Saved Listings', href: '/saved', icon: '❤️' },
             { label: 'Roommate Preferences', href: '/roommates/quiz', icon: '🧩' },
             { label: 'Notifications', href: '/notifications', icon: '🔔' },

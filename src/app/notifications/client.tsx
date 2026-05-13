@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Bell, Check, CheckCircle2, MessageSquare, Heart, ShieldCheck, AlertCircle } from 'lucide-react'
+import { Bell, Check, CheckCircle2, MessageSquare, Heart, ShieldCheck, AlertCircle, HandHeart, XCircle } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
@@ -54,6 +54,9 @@ export function NotificationsClient({ initialNotifications, userId }: Props) {
       case 'VERIFICATION_APPROVED': return <ShieldCheck className="w-5 h-5 text-success" />
       case 'VERIFICATION_REJECTED': return <AlertCircle className="w-5 h-5 text-danger" />
       case 'LISTING_APPROVED': return <CheckCircle2 className="w-5 h-5 text-success" />
+      case 'INTEREST_REQUEST': return <HandHeart className="w-5 h-5 text-coral" />
+      case 'INTEREST_ACCEPTED': return <CheckCircle2 className="w-5 h-5 text-success" />
+      case 'INTEREST_DECLINED': return <XCircle className="w-5 h-5 text-text-muted" />
       default: return <Bell className="w-5 h-5 text-text-muted" />
     }
   }

@@ -149,7 +149,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
           <div>
             <h2 className="font-bold text-text-primary leading-tight">{otherUser?.name}</h2>
             <p className="text-xs text-text-muted font-medium">
-              {chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'}
+              {chatType === 'LISTING' ? 'Listing Inquiry' : chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'}
             </p>
           </div>
         </div>

@@ -131,7 +131,7 @@ export default function ChatsPage() {
     )
   }
 
-  const totalUnread = chats.reduce((sum, c) => sum + c.unreadCount, 0)
+  const chatsWithUnread = chats.filter(c => !c.is_closed && c.unreadCount > 0).length
 
   return (
     <div className="min-h-screen bg-muted-bg pb-20 sm:pb-8">
@@ -144,7 +144,7 @@ export default function ChatsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Chats</h1>
             <p className="text-text-muted mt-0.5 text-sm">
               {chats.length} conversation{chats.length !== 1 ? 's' : ''}
-              {totalUnread > 0 && <span className="text-coral font-semibold"> · {totalUnread} unread</span>}
+              {chatsWithUnread > 0 && <span className="text-coral font-semibold"> · {chatsWithUnread} unread</span>}
             </p>
           </div>
         </div>

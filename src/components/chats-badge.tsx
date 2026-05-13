@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function ChatsBadge({ variant }: Props) {
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [chatsWithUnread, setChatsWithUnread] = useState(0)
   const pathname = usePathname()
   const supabase = createClient()
   const isActive = pathname === '/chats' || pathname.startsWith('/chats/')
@@ -34,42 +34,35 @@ export function ChatsBadge({ variant }: Props) {
 
       const matchIds = matches.map(m => m.id)
 
-      // Count total unread messages across all chats
-      const { count } = await supabase
+      // Count how many distinct chats have at least 1 unread message from someone else
+      const { data: unreadMessages } = await supabase
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('match_id')
         .in('match_id', matchIds)
         .eq('is_read', false)
         .neq('sender_id', user.id)
 
-      if (count !== null) setUnreadCount(count)
+      if (unreadMessages) {
+        const distinctChats = new Set(unreadMessages.map(m => m.match_id)).size
+        setChatsWithUnread(distinctChats)
+      }
 
-      // Subscribe to new messages in all matches
+      // Realtime: re-fetch full count on any message change (insert or update)
+      const refetch = async () => {
+        const { data: msgs } = await supabase
+          .from('messages')
+          .select('match_id')
+          .in('match_id', matchIds)
+          .eq('is_read', false)
+          .neq('sender_id', user.id)
+        if (msgs) {
+          setChatsWithUnread(new Set(msgs.map(m => m.match_id)).size)
+        }
+      }
+
       const channel = supabase.channel('global-chat-unread')
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages' },
-          (payload) => {
-            // Only count if it's in one of our matches and not from us
-            if (matchIds.includes(payload.new.match_id) && payload.new.sender_id !== user.id) {
-              setUnreadCount(prev => prev + 1)
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'messages' },
-          (payload) => {
-            // When a message is marked as read, decrement
-            if (
-              matchIds.includes(payload.new.match_id) &&
-              payload.new.is_read && !payload.old?.is_read &&
-              payload.new.sender_id !== user.id
-            ) {
-              setUnreadCount(prev => Math.max(0, prev - 1))
-            }
-          }
-        )
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, refetch)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, refetch)
         .subscribe()
 
       cleanup = () => { supabase.removeChannel(channel) }
@@ -89,9 +82,9 @@ export function ChatsBadge({ variant }: Props) {
         }`}
       >
         Chats
-        {unreadCount > 0 && (
+        {chatsWithUnread > 0 && (
           <span className="w-5 h-5 rounded-full bg-coral text-white text-[10px] font-bold flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {chatsWithUnread > 9 ? '9+' : chatsWithUnread}
           </span>
         )}
       </Link>
@@ -108,9 +101,9 @@ export function ChatsBadge({ variant }: Props) {
     >
       <div className="relative">
         <MessageSquare className="w-5 h-5" />
-        {unreadCount > 0 && (
+        {chatsWithUnread > 0 && (
           <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-coral text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {chatsWithUnread > 9 ? '9+' : chatsWithUnread}
           </span>
         )}
       </div>

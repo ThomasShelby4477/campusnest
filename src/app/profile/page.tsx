@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X } from 'lucide-react'
+import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X, Camera, Loader2 } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, setUser } = useAuthStore()
@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [branch, setBranch] = useState('')
   const [phone, setPhone] = useState('')
   const [lookingForBuddy, setLookingForBuddy] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -74,6 +75,42 @@ export default function ProfilePage() {
     router.push('/login')
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    
+    const file = e.target.files[0]
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    setUploadingAvatar(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to upload avatar')
+      }
+
+      const { avatar_url } = await res.json()
+      setUser({ ...user, avatar_url })
+      toast.success('Profile picture updated!')
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setUploadingAvatar(false)
+      // Clear input so same file can be selected again
+      e.target.value = ''
+    }
+  }
+
   const verifiedBadge = user.verified_status === 'VERIFIED'
 
   return (
@@ -83,7 +120,7 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="bg-white rounded-2xl border border-border-light p-6 sm:p-8 shadow-sm mb-6">
           <div className="flex items-start gap-4 sm:gap-6">
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-navy to-navy-light flex items-center justify-center shrink-0 overflow-hidden border-2 border-white shadow-sm">
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-navy to-navy-light flex items-center justify-center shrink-0 overflow-hidden border-2 border-white shadow-sm group">
               {user.avatar_url ? (
                 <img src={user.avatar_url} alt={user.name || 'User'} className="w-full h-full object-cover" />
               ) : (
@@ -91,6 +128,22 @@ export default function ProfilePage() {
                   {user.name?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               )}
+              
+              {/* Avatar Upload Overlay */}
+              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                {uploadingAvatar ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+                <input 
+                  type="file" 
+                  accept="image/jpeg, image/png, image/webp" 
+                  className="hidden" 
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar}
+                />
+              </label>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">

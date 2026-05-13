@@ -33,6 +33,8 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [myProfile, setMyProfile] = useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [otherUser, setOtherUser] = useState<any>(null)
   const [isTyping, setIsTyping] = useState(false)
   const [chatType, setChatType] = useState('ROOMMATE')
@@ -93,6 +95,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
     const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
     setOtherUser(match.user_a_id === user.id ? uB : uA)
+    setMyProfile(match.user_a_id === user.id ? uA : uB)
 
     const { data: initialMessages } = await supabase
       .from('messages')
@@ -302,23 +305,57 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
                   <div className="flex-1 h-px bg-coral/30" />
                 </div>
               )}
-              <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-                  isMine
-                    ? 'bg-navy text-white rounded-br-sm'
-                    : isUnread
-                      ? 'bg-coral/5 border border-coral/20 text-text-primary rounded-bl-sm'
-                      : 'bg-white border border-border-light text-text-primary rounded-bl-sm'
-                }`}>
-                  <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
-                </div>
-                <div className="flex items-center gap-1 mt-1 text-[10px] text-text-muted font-medium px-1">
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {isMine && (
-                    <span className={msg.is_read ? 'text-coral' : 'text-text-muted/50'}>
-                      ✓{msg.is_read && '✓'}
-                    </span>
+              <div className={`flex items-end gap-2 mb-4 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+                {/* Avatar */}
+                <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 mb-5 border border-border-light bg-muted-bg">
+                  {isMine ? (
+                    myProfile?.avatar_url ? (
+                      <Image 
+                        src={myProfile.avatar_url} 
+                        alt="Me" 
+                        fill 
+                        className="object-cover" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-navy flex items-center justify-center text-[10px] text-white font-bold">
+                        {myProfile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                    )
+                  ) : (
+                    otherUser?.avatar_url ? (
+                      <Image 
+                        src={otherUser.avatar_url} 
+                        alt={otherUser.name || 'User'} 
+                        fill 
+                        className="object-cover" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-coral flex items-center justify-center text-[10px] text-white font-bold">
+                        {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                    )
                   )}
+                </div>
+
+                {/* Message Bubble */}
+                <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                  <div className={`w-full rounded-2xl px-4 py-2 ${
+                    isMine
+                      ? 'bg-navy text-white rounded-br-sm'
+                      : isUnread
+                        ? 'bg-coral/5 border border-coral/20 text-text-primary rounded-bl-sm'
+                        : 'bg-white border border-border-light text-text-primary rounded-bl-sm'
+                  }`}>
+                    <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1 text-[10px] text-text-muted font-medium px-1">
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {isMine && (
+                      <span className={msg.is_read ? 'text-coral' : 'text-text-muted/50'}>
+                        ✓{msg.is_read && '✓'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -83,10 +83,14 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="bg-white rounded-2xl border border-border-light p-6 sm:p-8 shadow-sm mb-6">
           <div className="flex items-start gap-4 sm:gap-6">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-navy to-navy-light flex items-center justify-center shrink-0">
-              <span className="text-3xl sm:text-4xl font-black text-white">
-                {user.name?.charAt(0)?.toUpperCase() || 'U'}
-              </span>
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-navy to-navy-light flex items-center justify-center shrink-0 overflow-hidden border-2 border-white shadow-sm">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={user.name || 'User'} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl sm:text-4xl font-black text-white">
+                  {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">

@@ -43,8 +43,12 @@ export function Navbar() {
               
               <NotificationsBell />
               
-              <Link href="/profile" className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ml-2 transition-colors ${isActive('/profile') ? 'bg-navy text-white' : 'bg-navy/10 text-navy'}`}>
-                {user.name?.charAt(0) || 'U'}
+              <Link href="/profile" className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ml-2 transition-colors overflow-hidden border ${isActive('/profile') ? 'bg-navy text-white border-navy' : 'bg-navy/10 text-navy border-transparent'}`}>
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                ) : (
+                  user.name?.charAt(0)?.toUpperCase() || 'U'
+                )}
               </Link>
             </div>
           ) : (

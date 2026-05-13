@@ -12,13 +12,13 @@ CREATE POLICY "Match participants can read each other's profiles"
     )
   );
 
--- Also allow reading profiles of interest request senders/receivers
+-- Also allow reading profiles of interest request participants
 CREATE POLICY "Interest request participants can read each other's profiles"
   ON profiles FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM interest_requests
-      WHERE (sender_id = auth.uid() AND receiver_id = id)
-         OR (receiver_id = auth.uid() AND sender_id = id)
+      WHERE (requester_id = auth.uid() AND poster_id = id)
+         OR (poster_id = auth.uid() AND requester_id = id)
     )
   );

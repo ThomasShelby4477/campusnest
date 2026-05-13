@@ -95,6 +95,7 @@ CREATE POLICY "Match participants can send messages"
       SELECT 1 FROM matches
       WHERE id = match_id
         AND (user_a_id = auth.uid() OR user_b_id = auth.uid())
+        AND (is_closed IS NULL OR is_closed = FALSE)
     )
   );
 

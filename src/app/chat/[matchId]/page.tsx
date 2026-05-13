@@ -330,7 +330,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
             <XCircle className="w-4 h-4 text-danger" />
             <span>This chat has been permanently closed. Messages are read-only.</span>
           </div>
-          {closedBy === currentUser?.id && (
+          {(!closedBy || closedBy === currentUser?.id) && (
             <Button variant="outline" size="sm" onClick={handleReopenChat} disabled={closing}>
               {closing ? 'Reopening...' : 'Reopen Chat'}
             </Button>

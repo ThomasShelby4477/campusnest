@@ -64,7 +64,9 @@ function MatchesListInner() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processed = matchesData.map(m => {
       const isUserA = m.user_a_id === user.id
-      const otherUser = isUserA ? m.user_b : m.user_a
+      const uA = Array.isArray(m.user_a) ? m.user_a[0] : m.user_a
+      const uB = Array.isArray(m.user_b) ? m.user_b[0] : m.user_b
+      const otherUser = isUserA ? uB : uA
       
       const msgs = m.messages || []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

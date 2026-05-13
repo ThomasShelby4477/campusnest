@@ -90,7 +90,9 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
     }
 
     setChatType(match.chat_type)
-    setOtherUser(match.user_a_id === user.id ? match.user_b : match.user_a)
+    const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
+    const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
+    setOtherUser(match.user_a_id === user.id ? uB : uA)
 
     const { data: initialMessages } = await supabase
       .from('messages')

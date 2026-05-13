@@ -53,8 +53,9 @@ export default function ChatsPage() {
           .eq('is_read', false)
           .neq('sender_id', userId)
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const otherUser = (match as any).user_a?.id === userId ? match.user_b : match.user_a
+        const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
+        const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
+        const otherUser = uA?.id === userId ? uB : uA
 
         return {
           ...match,

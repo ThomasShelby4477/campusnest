@@ -164,16 +164,11 @@ export default function ChatsPage() {
                     i < chats.length - 1 ? 'border-b border-border-light' : ''
                   } ${hasUnread ? 'bg-coral/[0.03]' : ''} ${closed ? 'opacity-60' : ''}`}
                 >
-                  {/* Avatar */}
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted-bg shrink-0 border border-border-light">
                     {other?.avatar_url ? (
                       <Image src={other.avatar_url} alt={other.name || ''} fill className="object-cover" />
                     ) : (
                       <UserCircle2 className="w-full h-full text-text-muted p-1" />
-                    )}
-                    {/* Online-style unread dot */}
-                    {hasUnread && (
-                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-coral border-2 border-white" />
                     )}
                   </div>
 

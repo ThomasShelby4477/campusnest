@@ -9,10 +9,11 @@ import { toast } from 'sonner'
 interface Props {
   listingId: string
   isLoggedIn: boolean
+  isVerifiedUser: boolean
   isOwnListing: boolean
 }
 
-export function ListingContactButton({ listingId, isLoggedIn, isOwnListing }: Props) {
+export function ListingContactButton({ listingId, isLoggedIn, isVerifiedUser, isOwnListing }: Props) {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -125,6 +126,10 @@ export function ListingContactButton({ listingId, isLoggedIn, isOwnListing }: Pr
         onClick={() => {
           if (!isLoggedIn) {
             toast.error('Please log in to show interest')
+            return
+          }
+          if (!isVerifiedUser) {
+            toast.error('Only verified students can contact posters for safety. Please verify your profile first.')
             return
           }
           setOpen(true)

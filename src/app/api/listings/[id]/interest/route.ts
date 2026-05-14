@@ -69,12 +69,16 @@ export async function POST(
       }, { status: 409 })
     }
 
-    // Get requester's name
+    // Get requester's profile
     const { data: requesterProfile } = await supabaseAdmin
       .from('profiles')
-      .select('name')
+      .select('name, verified_status')
       .eq('id', user.id)
       .single()
+
+    if (requesterProfile?.verified_status !== 'VERIFIED') {
+      return NextResponse.json({ error: 'Only verified students can contact posters' }, { status: 403 })
+    }
 
     // Create the interest request
     const { error: insertErr } = await supabaseAdmin

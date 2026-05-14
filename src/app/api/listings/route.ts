@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { rateLimit } from '@/lib/rate-limit'
+import { csrfGuard } from '@/lib/csrf'
 
 const imageSchema = z.object({
   url: z.string().url(),
@@ -22,14 +24,19 @@ const listingSchema = z.object({
   has_ac: z.boolean().default(false),
   food_available: z.boolean().default(false),
   water_supply: z.enum(['24H', 'TIMED', 'BOREWELL']),
-  latitude: z.number(),
-  longitude: z.number(),
+  // [SECURITY M-3] Enforce valid geographic coordinate bounds
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
   address: z.string().min(5),
   available_from: z.string().optional(), // YYYY-MM-DD
   images: z.array(imageSchema).min(1).max(8),
 })
 
 export async function POST(request: NextRequest) {
+  // [SECURITY H-5] CSRF origin check
+  const csrfError = csrfGuard(request)
+  if (csrfError) return csrfError
+
   try {
     const supabase = await createClient()
     const {
@@ -52,6 +59,12 @@ export async function POST(request: NextRequest) {
         { error: 'Only verified users can post listings' },
         { status: 403 }
       )
+    }
+
+    // [SECURITY M-4] Rate limit: 5 listings created per hour per user
+    const rl = rateLimit(`listings:create:${user.id}`, { limit: 5, windowMs: 60 * 60 * 1000 })
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Too many listings created. Please wait.' }, { status: 429 })
     }
 
     const body = await request.json()

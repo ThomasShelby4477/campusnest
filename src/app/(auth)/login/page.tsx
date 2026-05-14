@@ -14,7 +14,14 @@ type LoginStep = 'email' | 'otp'
 function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/search'
+
+  // [SECURITY M-6] Validate redirect param to prevent open redirect attacks.
+  // Only allow relative paths (starts with '/') — reject full URLs, protocol-relative URLs, etc.
+  const rawRedirect = searchParams.get('redirect') || '/search'
+  const redirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+    ? rawRedirect
+    : '/search'
+
   const [step, setStep] = useState<LoginStep>('email')
   const [email, setEmail] = useState('')
   const [isTransitioning, setIsTransitioning] = useState(false)

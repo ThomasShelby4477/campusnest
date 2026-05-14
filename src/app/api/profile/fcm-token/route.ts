@@ -25,7 +25,8 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
+    // [SECURITY M-2] Log full error server-side only — never expose details to client
     console.error('FCM token update error:', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

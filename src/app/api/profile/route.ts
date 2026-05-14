@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod/v4'
 import { createClient } from '@/lib/supabase/server'
+import { csrfGuard } from '@/lib/csrf'
 
+// [SECURITY C-1] Only allow safe, user-editable fields.
+// 'role', 'verified_status', 'verification_badge' are intentionally excluded
+// to prevent privilege escalation — these are set by admin routes only.
 const updateSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
   year: z.number().int().min(1).max(5).optional(),
@@ -11,12 +15,15 @@ const updateSchema = z.object({
     .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number')
     .optional(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-  role: z.enum(['STUDENT', 'LANDLORD']).optional(),
   looking_for_buddy: z.boolean().optional(),
   avatar_url: z.string().url().optional(),
 })
 
 export async function PATCH(request: NextRequest) {
+  // [SECURITY H-5] Reject cross-origin mutation requests
+  const csrfError = csrfGuard(request)
+  if (csrfError) return csrfError
+
   try {
     const supabase = await createClient()
     const {
@@ -35,42 +42,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: errors[0] }, { status: 422 })
     }
 
-    const updates = result.data
+    const { error } = await supabase
+      .from('profiles')
+      .update(result.data)
+      .eq('id', user.id)
 
-    // If setting role to LANDLORD, auto-verify
-    if (updates.role === 'LANDLORD') {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          verified_status: 'VERIFIED',
-          verification_badge: false,
-        })
-        .eq('id', user.id)
-
-      if (error) {
-        console.error('Profile update error:', error)
-        return NextResponse.json(
-          { error: 'Failed to update profile' },
-          { status: 500 }
-        )
-      }
-    } else {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-
-      if (error) {
-        console.error('Profile update error:', error)
-        return NextResponse.json(
-          { error: 'Failed to update profile' },
-          { status: 500 }
-        )
-      }
+    if (error) {
+      console.error('Profile update error:', error)
+      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
     }
 
-    // Fetch and return updated profile
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
@@ -80,10 +61,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ profile })
   } catch (err) {
     console.error('profile route error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -105,18 +83,12 @@ export async function GET() {
       .single()
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Failed to fetch profile' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
     }
 
     return NextResponse.json({ profile })
   } catch (err) {
     console.error('profile GET error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

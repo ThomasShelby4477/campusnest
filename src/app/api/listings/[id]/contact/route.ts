@@ -56,14 +56,23 @@ export async function POST(
       )
     }
 
-    // Log the action to audit_logs
-    await supabaseAdmin.from('audit_logs').insert({
+    // [SECURITY L-4] Write audit log BEFORE returning sensitive data.
+    // If logging fails, we refuse to disclose — fail-closed for full traceability.
+    const { error: logError } = await supabaseAdmin.from('audit_logs').insert({
       actor_id: user.id,
       action: 'VIEW_CONTACT',
       target_type: 'LISTING',
       target_id: id,
       metadata: { poster_id: listing.poster_id },
     })
+
+    if (logError) {
+      console.error('Audit log failed, refusing phone disclosure:', logError)
+      return NextResponse.json(
+        { error: 'Temporary error logging access. Please retry.' },
+        { status: 503 }
+      )
+    }
 
     return NextResponse.json({ phone: posterProfile.phone })
   } catch (err) {

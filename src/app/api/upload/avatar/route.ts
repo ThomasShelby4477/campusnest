@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createBrowserClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 import crypto from 'crypto'
 
 const supabaseAdmin = createClient(
@@ -42,6 +43,12 @@ export async function POST(req: Request) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // [SECURITY H-1] Rate limit: 10 avatar uploads per hour per user
+    const rl = rateLimit(`upload:avatar:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Too many uploads. Please try again later.' }, { status: 429 })
     }
 
     const formData = await req.formData()
@@ -101,6 +108,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Avatar uploaded successfully', avatar_url: publicUrl })
   } catch (err) {
     console.error('Avatar upload error:', err)
+    // [SECURITY M-2] Do not leak internal error details
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

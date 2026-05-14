@@ -1,41 +1,41 @@
 // public/firebase-messaging-sw.js
+// [SECURITY H-2] Firebase config is received via postMessage from the app,
+// NOT from URL query parameters (which leak to server access logs and browser history).
 
-// Give the service worker access to Firebase Messaging.
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js')
 
-// The environment variables will be injected here during build or
-// you can hardcode the non-sensitive public config.
-// Since Service Workers don't have access to process.env by default,
-// it's common practice to use URL parameters or a config file.
-// For simplicity in MVP, we configure it via query params when registering,
-// but Firebase compat allows initialization like this:
+let messaging = null
 
-firebase.initializeApp({
-  apiKey: new URL(location).searchParams.get('apiKey'),
-  authDomain: new URL(location).searchParams.get('authDomain'),
-  projectId: new URL(location).searchParams.get('projectId'),
-  messagingSenderId: new URL(location).searchParams.get('messagingSenderId'),
-  appId: new URL(location).searchParams.get('appId'),
-})
+// Listen for config from the main app thread
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'FIREBASE_CONFIG' && event.data.config) {
+    try {
+      // Only initialize once
+      if (!firebase.apps.length) {
+        firebase.initializeApp(event.data.config)
+      }
+      messaging = firebase.messaging()
 
-const messaging = firebase.messaging()
-
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload)
-
-  const notificationTitle = payload.notification?.title || 'CampusNest Notification'
-  const notificationOptions = {
-    body: payload.notification?.body,
-    icon: '/favicon.ico',
-    data: payload.data, // Contains link info
+      messaging.onBackgroundMessage((payload) => {
+        const notificationTitle = payload.notification?.title || 'CampusNest Notification'
+        const notificationOptions = {
+          body: payload.notification?.body,
+          icon: '/favicon.ico',
+          data: payload.data,
+        }
+        self.registration.showNotification(notificationTitle, notificationOptions)
+      })
+    } catch {
+      // Firebase already initialized or not supported — silently continue
+    }
   }
-
-  self.registration.showNotification(notificationTitle, notificationOptions)
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const link = event.notification.data?.link || '/'
+  // [SECURITY] Only navigate to same-origin relative paths to prevent open redirect
+  const rawLink = event.notification.data?.link || '/'
+  const link = rawLink.startsWith('/') && !rawLink.startsWith('//') ? rawLink : '/'
   event.waitUntil(self.clients.openWindow(link))
 })

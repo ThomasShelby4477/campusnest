@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { rateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/listings/[id]/interest
@@ -21,6 +22,12 @@ export async function POST(
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // [SECURITY M-4] Rate limit: 20 interest requests per hour per user
+    const rl = rateLimit(`interest:send:${user.id}`, { limit: 20, windowMs: 60 * 60 * 1000 })
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Too many requests. Please wait before sending more.' }, { status: 429 })
     }
 
     // Get optional message from body

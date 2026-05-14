@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Shield, Users, MapPin, MessageCircle, Sparkles, ArrowRight, Star } from 'lucide-react'
 import { HeroListingStack } from './hero-listing-stack'
 import { ScrollReveal } from '@/components/scroll-reveal'
+import { createClient } from '@/lib/supabase/server'
 
 const features = [
   {
@@ -48,7 +49,10 @@ const steps = [
   { num: '03', title: 'Connect & Move In', desc: 'Chat with matches and landlords, visit properties, and move into your new home.' },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <div className="bg-white">
 
@@ -77,11 +81,19 @@ export default function HomePage() {
                 all designed for the NFSU community.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/signup">
-                  <Button size="lg" className="w-full sm:w-auto bg-coral hover:bg-coral-dark text-white text-lg h-14 px-10 rounded-full font-bold shadow-xl shadow-coral/30 transition-all hover:shadow-2xl hover:shadow-coral/40 hover:-translate-y-1 active:translate-y-0">
-                    Get Started Free <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
+                {!user ? (
+                  <Link href="/signup">
+                    <Button size="lg" className="w-full sm:w-auto bg-coral hover:bg-coral-dark text-white text-lg h-14 px-10 rounded-full font-bold shadow-xl shadow-coral/30 transition-all hover:shadow-2xl hover:shadow-coral/40 hover:-translate-y-1 active:translate-y-0">
+                      Get Started Free <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href="/roommates">
+                    <Button size="lg" className="w-full sm:w-auto bg-coral hover:bg-coral-dark text-white text-lg h-14 px-10 rounded-full font-bold shadow-xl shadow-coral/30 transition-all hover:shadow-2xl hover:shadow-coral/40 hover:-translate-y-1 active:translate-y-0">
+                      Find Roommates <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/search">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 text-lg h-14 px-10 rounded-full font-bold transition-all hover:-translate-y-0.5">
                     Browse Listings
@@ -229,11 +241,19 @@ export default function HomePage() {
           <p className="text-text-muted text-lg mb-10 max-w-xl mx-auto">
             Join hundreds of NFSU students who&apos;ve already found their perfect housing and roommates through CampusNest.
           </p>
-          <Link href="/signup">
-            <Button size="lg" className="bg-coral hover:bg-coral-dark text-white text-lg h-14 px-12 rounded-full font-bold shadow-xl shadow-coral/30 transition-all hover:shadow-2xl hover:shadow-coral/40 hover:-translate-y-1 active:translate-y-0">
-              Create Free Account <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+          {!user ? (
+            <Link href="/signup">
+              <Button size="lg" className="bg-coral hover:bg-coral-dark text-white text-lg h-14 px-12 rounded-full font-bold shadow-xl shadow-coral/30 transition-all hover:shadow-2xl hover:shadow-coral/40 hover:-translate-y-1 active:translate-y-0">
+                Create Free Account <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/search">
+              <Button size="lg" className="bg-coral hover:bg-coral-dark text-white text-lg h-14 px-12 rounded-full font-bold shadow-xl shadow-coral/30 transition-all hover:shadow-2xl hover:shadow-coral/40 hover:-translate-y-1 active:translate-y-0">
+                Start Exploring <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          )}
         </ScrollReveal>
       </section>
 

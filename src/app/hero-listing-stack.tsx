@@ -112,78 +112,77 @@ export function HeroListingStack() {
             )}
 
             {isFront && (
-              <div className="relative z-10 h-full p-7 flex flex-col justify-between">
-                <div>
-                  {/* Badges */}
-                  <div className="flex gap-2 mb-5">
-                    <span className={`${ROOM_COLORS[listing.room_type] || 'bg-coral/90'} text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm`}>
-                      {listing.room_type}
+              <div className="relative z-10 h-full flex flex-col justify-between">
+                {/* Top Badges */}
+                <div className="p-5 flex gap-2 flex-wrap">
+                  <span className={`${ROOM_COLORS[listing.room_type] || 'bg-coral/90'} text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm`}>
+                    {listing.room_type}
+                  </span>
+                  {listing.verified_status === 'VERIFIED' && (
+                    <span className="bg-emerald-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
+                      <CheckCircle2 className="w-3 h-3" /> Verified
                     </span>
-                    {listing.verified_status === 'VERIFIED' && (
-                      <span className="bg-emerald-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
-                        <CheckCircle2 className="w-3 h-3" /> Verified
-                      </span>
-                    )}
-                    <span className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm border border-white/10">
-                      {listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed === 'MALE' ? 'Boys' : 'Girls'}
-                    </span>
-                  </div>
+                  )}
+                  <span className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm border border-white/10">
+                    {listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed === 'MALE' ? 'Boys' : 'Girls'}
+                  </span>
+                </div>
 
-                  <h3 className="text-2xl font-black text-white mb-2 line-clamp-2 leading-tight drop-shadow-md">{listing.title}</h3>
-                  <p className="text-white text-sm mb-4 flex items-center gap-1 drop-shadow-md font-medium">
-                    <MapPin className="w-4 h-4 shrink-0 drop-shadow-sm" />
+                {/* Bottom Info Panel */}
+                <div className="p-5 bg-navy/85 backdrop-blur-xl border-t border-white/10 rounded-b-3xl">
+                  <h3 className="text-xl font-black text-white mb-1.5 line-clamp-1">{listing.title}</h3>
+                  <p className="text-white/80 text-sm mb-4 flex items-center gap-1 font-medium">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{listing.address}</span>
                   </p>
 
-                  {listing.distance_from_college != null && (
-                    <div className="inline-flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1 text-xs text-white font-semibold mb-4 shadow-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-coral inline-block" />
-                      {listing.distance_from_college.toFixed(1)} km from campus
-                    </div>
-                  )}
-
-                  {/* Amenity pills */}
-                  <div className="flex gap-2 flex-wrap drop-shadow-sm">
+                  <div className="flex gap-2 mb-5 overflow-x-auto no-scrollbar pb-1">
+                    {listing.distance_from_college != null && (
+                      <span className="shrink-0 inline-flex items-center gap-1 bg-white/10 border border-white/10 rounded-lg px-2.5 py-1 text-[11px] text-white font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-coral inline-block" />
+                        {listing.distance_from_college.toFixed(1)} km
+                      </span>
+                    )}
                     {listing.has_wifi && (
-                      <span className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
+                      <span className="shrink-0 bg-white/10 border border-white/10 text-white px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1 font-medium">
                         <Wifi className="w-3 h-3" /> WiFi
                       </span>
                     )}
                     {listing.has_ac && (
-                      <span className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
+                      <span className="shrink-0 bg-white/10 border border-white/10 text-white px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1 font-medium">
                         <Wind className="w-3 h-3" /> AC
                       </span>
                     )}
                     {listing.food_available && (
-                      <span className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
+                      <span className="shrink-0 bg-white/10 border border-white/10 text-white px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1 font-medium">
                         <Utensils className="w-3 h-3" /> Food
                       </span>
                     )}
                   </div>
-                </div>
 
-                {/* Price */}
-                <div>
-                  <p className="text-3xl font-black text-white">
-                    ₹{listing.rent.toLocaleString('en-IN')}
-                    <span className="text-base font-normal text-white/50">/mo</span>
-                  </p>
-                  {/* Dot indicators */}
-                  {listings.length > 1 && (
-                    <div className="flex gap-1.5 mt-4">
-                      {listings.map((_, dotIdx) => (
-                        <button
-                          key={dotIdx}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (intervalRef.current) clearInterval(intervalRef.current)
-                            setActiveIdx(dotIdx)
-                          }}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${dotIdx === activeIdx ? 'w-6 bg-coral' : 'w-1.5 bg-white/30'}`}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex items-end justify-between">
+                    <p className="text-2xl font-black text-white">
+                      ₹{listing.rent.toLocaleString('en-IN')}
+                      <span className="text-sm font-normal text-white/50 ml-1">/mo</span>
+                    </p>
+                    
+                    {/* Dot indicators */}
+                    {listings.length > 1 && (
+                      <div className="flex gap-1.5 mb-1.5">
+                        {listings.map((_, dotIdx) => (
+                          <button
+                            key={dotIdx}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (intervalRef.current) clearInterval(intervalRef.current)
+                              setActiveIdx(dotIdx)
+                            }}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${dotIdx === activeIdx ? 'w-5 bg-coral' : 'w-1.5 bg-white/20 hover:bg-white/40'}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

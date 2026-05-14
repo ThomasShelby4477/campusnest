@@ -102,6 +102,8 @@ function SearchContent() {
   }
 
   const FiltersBar = (
+    // Filter bar — sticky inside the list panel
+    // top-0 is relative to the nearest scroll container, NOT the viewport
     <div className="p-3 bg-white border-b border-border-light sticky top-0 z-10 shadow-sm flex flex-wrap items-center gap-2">
       <div className="flex items-center text-sm font-semibold text-text-primary mr-1">
         <SlidersHorizontal className="w-4 h-4 mr-1.5 text-text-muted" /> Filters
@@ -179,6 +181,7 @@ function SearchContent() {
   )
 
   const ListPanel = (
+    // Use overflow-y-auto with momentum scrolling — CSS handles -webkit-overflow-scrolling via globals.css
     <div className="flex-1 overflow-y-auto">
       {loading && page === 0 ? (
         <div className="flex justify-center p-12">
@@ -221,7 +224,9 @@ function SearchContent() {
   )
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-muted-bg">
+    // svh = small viewport height — correctly accounts for iOS Safari address bar.
+    // 100vh on mobile includes the address bar, causing content to be cut off.
+    <div className="flex h-[calc(100svh-64px)] overflow-hidden bg-muted-bg">
 
       {/* ── DESKTOP layout ───────────────────────────────── */}
       <div className="hidden lg:flex w-full h-full">

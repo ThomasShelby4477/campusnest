@@ -57,10 +57,14 @@ export default async function HomePage() {
     <div className="bg-white">
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-navy min-h-[90vh] flex items-center">
-        {/* Animated gradient orbs */}
-        <div className="absolute top-[-30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-coral/20 blur-[120px] animate-float" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-navy-light/40 blur-[100px]" style={{ animationDelay: '1.5s' }} />
+      {/* min-h: use svh (small viewport height) so iOS Safari address bar doesn't cause layout shift */}
+      <section className="relative overflow-hidden bg-navy min-h-[90svh] flex items-center">
+        {/* Animated gradient orbs — hidden on mobile to prevent GPU/scroll jank */}
+        <div className="hidden sm:block absolute top-[-30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-coral/20 blur-[120px] animate-float pointer-events-none" />
+        <div className="hidden sm:block absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-navy-light/40 blur-[100px] pointer-events-none" style={{ animationDelay: '1.5s' }} />
+        {/* Lightweight mobile orbs — smaller, less blur, no animation */}
+        <div className="sm:hidden absolute top-0 right-0 w-48 h-48 rounded-full bg-coral/15 blur-[60px] pointer-events-none" />
+        <div className="sm:hidden absolute bottom-0 left-0 w-40 h-40 rounded-full bg-navy-light/30 blur-[50px] pointer-events-none" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-0 w-full">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">

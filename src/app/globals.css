@@ -102,12 +102,26 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Prevent horizontal overflow glitches on mobile */
+    box-sizing: border-box;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+    /* Prevent bounce/overscroll glitches on iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Smooth scrolling — but only where scroll is on html, not inner divs */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Fix: prevent mobile browser from creating a broken scroll context */
+    overflow-x: hidden;
+    /* Prevent elastic overscroll on the body itself (iOS Safari) */
+    overscroll-behavior-y: none;
+    /* Kill text size inflation on landscape rotation */
+    -webkit-text-size-adjust: 100%;
   }
 }
 
@@ -160,18 +174,22 @@
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 .animate-fade-in-up {
   animation: fade-in-up 0.5s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 .animate-slide-in-left {
   animation: slide-in-left 0.3s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 .animate-pulse-glow {
@@ -180,27 +198,60 @@
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+  /* Promote to its own compositing layer to prevent scroll jank */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .animate-scale-in {
   animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }
 
 .animate-slide-up-fade {
   animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }
 
 /* ── Scroll-reveal (IntersectionObserver-driven) ──────────── */
 
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Use translateY on desktop; on mobile avoid repaints by keeping Y small */
+  transform: translateY(16px);
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Promote to own layer to prevent scroll jank when animating */
+  will-change: opacity, transform;
+  /* contain layout so sibling repaints don't cascade */
+  contain: layout style;
 }
 
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
+  will-change: auto; /* release compositing layer after animation */
+  contain: none;
+}
+
+/* Reduce motion on devices that request it — critical for mobile accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+    contain: none;
+  }
+  .animate-float,
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-scale-in,
+  .animate-slide-up-fade,
+  .animate-slide-in-right,
+  .animate-slide-in-left {
+    animation: none !important;
+  }
 }
 
 /* stagger delays for children */
@@ -233,6 +284,28 @@
   opacity: 0;
   transform: translateX(-20px);
   transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────── */
+
+/* ── Touch scrolling for overflow containers ─────────────── */
+
+.overflow-y-auto,
+.overflow-y-scroll {
+  /* Enable momentum scrolling on iOS Safari */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent scroll from leaking to parent (prevents body scroll freeze) */
+  overscroll-behavior: contain;
+}
+
+/* ── Mobile fixed elements — promote to GPU layer ─────────── */
+
+.fixed {
+  /* Force GPU rasterization to prevent fixed elements repainting on scroll */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* ── Scrollbar styling ─────────────────────────────────────── */

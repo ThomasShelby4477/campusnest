@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import { Navbar } from '@/components/navbar'
@@ -36,14 +37,28 @@ export const metadata: Metadata = {
   },
 }
 
+// Separate viewport export — required by Next.js 14+ for correct mobile viewport control.
+// Prevents iOS Safari keyboard from causing full-page scroll jumps.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5, // Allow pinch-zoom (accessibility), cap excessive zoom
+  interactiveWidget: 'resizes-content',
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">
+    <html lang="en" className={`${inter.variable} antialiased`}>
+      {/*
+        body: removed min-h-full + flex flex-col.
+        These create a secondary scroll container on iOS Safari, causing
+        touch-scroll glitches. Natural document flow works correctly on mobile.
+      */}
+      <body className="font-sans bg-background text-foreground overflow-x-hidden">
         <Providers>
           <Navbar />
           {children}

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useListingStore } from '@/stores/listing-store'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression'
+import { EmptyState } from '@/components/empty-state'
 import { BasicInfoStep } from './steps/basic-info'
 import { AmenitiesStep } from './steps/amenities'
 import { LocationStep } from './steps/location'
@@ -17,6 +18,24 @@ export default function CreateListingPage() {
   const [step, setStep] = useState(1)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isVerified, setIsVerified] = useState<boolean | null>(null)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('Please log in first')
+        router.push('/')
+        return
+      }
+      const { data } = await supabase.from('profiles').select('verified_status').eq('id', user.id).single()
+      setIsVerified(data?.verified_status === 'VERIFIED')
+      setIsCheckingAuth(false)
+    }
+    checkAuth()
+  }, [router])
 
   const goToStep = (targetStep: number) => {
     setIsTransitioning(true)
@@ -128,6 +147,30 @@ export default function CreateListingPage() {
   ]
 
   const totalSteps = steps.length
+
+  if (isCheckingAuth) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-muted-bg">
+        <div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (isVerified === false) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center bg-muted-bg p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl p-6 shadow-sm border border-border-light">
+          <EmptyState
+            icon="listings"
+            title="Verification Required"
+            description="Only verified NFSU students can post property listings to keep our community safe. Please complete your ID verification first."
+            actionLabel="Verify Profile"
+            onAction={() => router.push('/profile')}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-muted-bg py-8 px-4 sm:px-6">

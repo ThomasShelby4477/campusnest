@@ -57,7 +57,7 @@ export function HeroListingStack() {
 
     const interval = setInterval(() => {
       api.scrollNext()
-    }, 4000)
+    }, 2500)
 
     return () => clearInterval(interval)
   }, [api, isHovered])

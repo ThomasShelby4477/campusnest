@@ -127,7 +127,6 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
         .select('*')
         .eq('match_id', matchId)
         .order('created_at', { ascending: false })
-        .limit(50)
 
       if (initialMessages) {
         const reversed = initialMessages.reverse()

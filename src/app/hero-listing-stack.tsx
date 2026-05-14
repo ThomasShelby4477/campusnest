@@ -8,6 +8,7 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  type CarouselApi,
 } from '@/components/ui/carousel'
 
 interface Listing {
@@ -37,6 +38,29 @@ const ROOM_COLORS: Record<string, string> = {
 export function HeroListingStack() {
   const router = useRouter()
   const [listings, setListings] = useState<Listing[]>([])
+  const [api, setApi] = useState<CarouselApi>()
+  const [current, setCurrent] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
+
+  useEffect(() => {
+    if (!api) return
+
+    setCurrent(api.selectedScrollSnap())
+
+    api.on('select', () => {
+      setCurrent(api.selectedScrollSnap())
+    })
+  }, [api])
+
+  useEffect(() => {
+    if (!api || isHovered) return
+
+    const interval = setInterval(() => {
+      api.scrollNext()
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [api, isHovered])
 
   useEffect(() => {
     fetch('/api/listings/featured')
@@ -61,8 +85,13 @@ export function HeroListingStack() {
   }
 
   return (
-    <div className="relative w-[380px] h-[460px]">
+    <div 
+      className="relative w-[380px] h-[460px]"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <Carousel
+        setApi={setApi}
         opts={{
           loop: true,
           align: "start",
@@ -144,6 +173,22 @@ export function HeroListingStack() {
                           ₹{listing.rent.toLocaleString('en-IN')}
                           <span className="text-sm font-normal text-white/50 ml-1">/mo</span>
                         </p>
+                        
+                        {/* Dot indicators */}
+                        {listings.length > 1 && (
+                          <div className="flex gap-1.5 mb-1.5 relative z-20">
+                            {listings.map((_, dotIdx) => (
+                              <button
+                                key={dotIdx}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  api?.scrollTo(dotIdx)
+                                }}
+                                className={`h-1.5 rounded-full transition-all duration-300 ${dotIdx === current ? 'w-5 bg-coral' : 'w-1.5 bg-white/20 hover:bg-white/40'}`}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

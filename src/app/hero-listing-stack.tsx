@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { MapPin, CheckCircle2, Wifi, Wind, Utensils } from 'lucide-react'
 
@@ -29,6 +30,7 @@ const ROOM_COLORS: Record<string, string> = {
 }
 
 export function HeroListingStack() {
+  const router = useRouter()
   const [listings, setListings] = useState<Listing[]>([])
   const [activeIdx, setActiveIdx] = useState(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -82,7 +84,10 @@ export function HeroListingStack() {
         return (
           <div
             key={listing.id}
-            className="absolute w-full h-full rounded-3xl overflow-hidden border border-white/20 backdrop-blur-md transition-all duration-700"
+            onClick={() => {
+              if (isFront) router.push(`/listings/${listing.id}`)
+            }}
+            className={`absolute w-full h-full rounded-3xl overflow-hidden border border-white/20 backdrop-blur-md transition-all duration-700 ${isFront ? 'cursor-pointer hover:border-coral/50' : ''}`}
             style={{
               top: `${offset}px`,
               left: `${offset}px`,
@@ -170,7 +175,8 @@ export function HeroListingStack() {
                       {listings.map((_, dotIdx) => (
                         <button
                           key={dotIdx}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             if (intervalRef.current) clearInterval(intervalRef.current)
                             setActiveIdx(dotIdx)
                           }}

@@ -50,137 +50,6 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   const router = useRouter()
   let typingTimer: NodeJS.Timeout
 
-  useEffect(() => {
-    let isMounted = true
-    let activeChannels: any[] = []
-
-    const initChat = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
-    }
-    setCurrentUser(user)
-
-    const { data: match } = await supabase
-      .from('matches')
-      .select('*, user_a:profiles!matches_user_a_id_fkey(*), user_b:profiles!matches_user_b_id_fkey(*)')
-      .eq('id', matchId)
-      .single()
-
-    if (!match || (match.user_a_id !== user.id && match.user_b_id !== user.id)) {
-      router.push('/chats')
-      return
-    }
-
-    // If chat is closed, show in read-only mode
-    if (match.is_closed) {
-      setIsClosed(true)
-      setClosedBy(match.closed_by)
-    }
-
-    setChatType(match.chat_type)
-    const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
-    const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
-    const otherUserId = match.user_a_id === user.id ? match.user_b_id : match.user_a_id
-    let other = match.user_a_id === user.id ? uB : uA
-    let mine = match.user_a_id === user.id ? uA : uB
-
-    // RLS fallback: if the join returned null for the other user's profile,
-    // fetch it directly via the server-side API which uses the service role key
-    if (!other || !other.id) {
-      const res = await fetch(`/api/users/${otherUserId}`)
-      if (res.ok) {
-        const { profile } = await res.json()
-        other = profile
-      }
-    }
-    // Same fallback for own profile
-    if (!mine || !mine.id) {
-      const res = await fetch(`/api/users/${user.id}`)
-      if (res.ok) {
-        const { profile } = await res.json()
-        mine = profile
-      }
-    }
-
-    setOtherUser(other)
-    setMyProfile(mine)
-
-    const { data: initialMessages } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('match_id', matchId)
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    if (initialMessages) {
-      const reversed = initialMessages.reverse()
-      // Save unread IDs before marking them read so we can show the divider
-      const unreadIds = reversed.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id)
-      setInitialUnreadIds(new Set(unreadIds))
-      setMessages(reversed)
-      if (unreadIds.length > 0) {
-        await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
-      }
-    }
-
-    setLoading(false)
-
-    // Only subscribe to realtime if chat is still open
-    if (!match.is_closed) {
-      const channel = supabase.channel(`match:${matchId}`)
-      channel.on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new])
-          if (payload.new.sender_id !== user.id && document.hasFocus()) {
-            supabase.from('messages').update({ is_read: true }).eq('id', payload.new.id).then()
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
-        (payload) => {
-          setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
-        }
-      )
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.user_id !== user.id) {
-          setIsTyping(true)
-          clearTimeout(typingTimer)
-          typingTimer = setTimeout(() => setIsTyping(false), 2000)
-        }
-      })
-      if (isMounted) {
-        channel.subscribe()
-        activeChannels.push(channel)
-      } else {
-        supabase.removeChannel(channel)
-      }
-    }
-
-    // Subscribe to match changes so we detect if the other user closes the chat
-    const matchChannel = supabase.channel(`match-status:${matchId}`)
-    matchChannel.on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
-      (payload) => {
-        setIsClosed(payload.new.is_closed)
-        setClosedBy(payload.new.closed_by)
-      }
-    )
-
-    if (isMounted) {
-      matchChannel.subscribe()
-      activeChannels.push(matchChannel)
-    } else {
-      supabase.removeChannel(matchChannel)
-    }
-  }
-
   const prevMessagesLength = useRef(0)
 
   useEffect(() => {
@@ -194,6 +63,135 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
   useEffect(() => {
     let isMounted = true
+    let activeChannels: any[] = []
+
+    const initChat = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+        return
+      }
+      setCurrentUser(user)
+
+      const { data: match } = await supabase
+        .from('matches')
+        .select('*, user_a:profiles!matches_user_a_id_fkey(*), user_b:profiles!matches_user_b_id_fkey(*)')
+        .eq('id', matchId)
+        .single()
+
+      if (!match || (match.user_a_id !== user.id && match.user_b_id !== user.id)) {
+        router.push('/chats')
+        return
+      }
+
+      // If chat is closed, show in read-only mode
+      if (match.is_closed) {
+        setIsClosed(true)
+        setClosedBy(match.closed_by)
+      }
+
+      setChatType(match.chat_type)
+      const uA = Array.isArray(match.user_a) ? match.user_a[0] : match.user_a
+      const uB = Array.isArray(match.user_b) ? match.user_b[0] : match.user_b
+      const otherUserId = match.user_a_id === user.id ? match.user_b_id : match.user_a_id
+      let other = match.user_a_id === user.id ? uB : uA
+      let mine = match.user_a_id === user.id ? uA : uB
+
+      // RLS fallback: if the join returned null for the other user's profile,
+      // fetch it directly via the server-side API which uses the service role key
+      if (!other || !other.id) {
+        const res = await fetch(`/api/users/${otherUserId}`)
+        if (res.ok) {
+          const { profile } = await res.json()
+          other = profile
+        }
+      }
+      // Same fallback for own profile
+      if (!mine || !mine.id) {
+        const res = await fetch(`/api/users/${user.id}`)
+        if (res.ok) {
+          const { profile } = await res.json()
+          mine = profile
+        }
+      }
+
+      setOtherUser(other)
+      setMyProfile(mine)
+
+      const { data: initialMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (initialMessages) {
+        const reversed = initialMessages.reverse()
+        // Save unread IDs before marking them read so we can show the divider
+        const unreadIds = reversed.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id)
+        setInitialUnreadIds(new Set(unreadIds))
+        setMessages(reversed)
+        if (unreadIds.length > 0) {
+          await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
+        }
+      }
+
+      setLoading(false)
+
+      // Only subscribe to realtime if chat is still open
+      if (!match.is_closed) {
+        const channel = supabase.channel(`match:${matchId}`)
+        channel.on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
+          (payload) => {
+            setMessages(prev => [...prev, payload.new])
+            if (payload.new.sender_id !== user.id && document.hasFocus()) {
+              supabase.from('messages').update({ is_read: true }).eq('id', payload.new.id).then()
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
+          (payload) => {
+            setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
+          }
+        )
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+          if (payload.user_id !== user.id) {
+            setIsTyping(true)
+            clearTimeout(typingTimer)
+            typingTimer = setTimeout(() => setIsTyping(false), 2000)
+          }
+        })
+        if (isMounted) {
+          channel.subscribe()
+          activeChannels.push(channel)
+        } else {
+          supabase.removeChannel(channel)
+        }
+      }
+
+      // Subscribe to match changes so we detect if the other user closes the chat
+      const matchChannel = supabase.channel(`match-status:${matchId}`)
+      matchChannel.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        (payload) => {
+          setIsClosed(payload.new.is_closed)
+          setClosedBy(payload.new.closed_by)
+        }
+      )
+
+      if (isMounted) {
+        matchChannel.subscribe()
+        activeChannels.push(matchChannel)
+      } else {
+        supabase.removeChannel(matchChannel)
+      }
+    }
+
     initChat()
     
     return () => {

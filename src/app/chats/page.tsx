@@ -89,17 +89,22 @@ export default function ChatsPage() {
   }, [supabase])
 
   useEffect(() => {
+    let isMounted = true
+    let activeChannels: any[] = []
+
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/login?redirect=/chats')
+        if (isMounted) router.push('/login?redirect=/chats')
         return
       }
-      setCurrentUserId(user.id)
+      if (isMounted) setCurrentUserId(user.id)
 
       const data = await fetchChats(user.id)
-      setChats(data)
-      setLoading(false)
+      if (isMounted) {
+        setChats(data)
+        setLoading(false)
+      }
 
       // Subscribe to message changes to update unread counts in realtime
       const channel = supabase.channel('chats-list-realtime')
@@ -109,17 +114,24 @@ export default function ChatsPage() {
           async () => {
             // Re-fetch chats to get updated unread counts & last messages
             const updated = await fetchChats(user.id)
-            setChats(updated)
+            if (isMounted) setChats(updated)
           }
         )
-        .subscribe()
-
-      return () => { supabase.removeChannel(channel) }
+      
+      if (isMounted) {
+        channel.subscribe()
+        activeChannels.push(channel)
+      } else {
+        supabase.removeChannel(channel)
+      }
     }
 
-    let cleanup: (() => void) | undefined
-    init().then(c => { cleanup = c })
-    return () => { cleanup?.() }
+    init()
+    
+    return () => {
+      isMounted = false
+      activeChannels.forEach(c => supabase.removeChannel(c))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

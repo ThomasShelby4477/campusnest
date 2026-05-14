@@ -51,22 +51,10 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   let typingTimer: NodeJS.Timeout
 
   useEffect(() => {
-    initChat()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    let isMounted = true
+    let activeChannels: any[] = []
 
-  const prevMessagesLength = useRef(0)
-
-  useEffect(() => {
-    if (prevMessagesLength.current === 0 && messages.length > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
-    } else {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-    prevMessagesLength.current = messages.length
-  }, [messages, isTyping])
-
-  const initChat = async () => {
+    const initChat = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       router.push('/login')
@@ -166,7 +154,12 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
           typingTimer = setTimeout(() => setIsTyping(false), 2000)
         }
       })
-      .subscribe()
+      if (isMounted) {
+        channel.subscribe()
+        activeChannels.push(channel)
+      } else {
+        supabase.removeChannel(channel)
+      }
     }
 
     // Subscribe to match changes so we detect if the other user closes the chat
@@ -179,12 +172,36 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
         setClosedBy(payload.new.closed_by)
       }
     )
-    .subscribe()
 
-    return () => {
-      supabase.removeAllChannels()
+    if (isMounted) {
+      matchChannel.subscribe()
+      activeChannels.push(matchChannel)
+    } else {
+      supabase.removeChannel(matchChannel)
     }
   }
+
+  const prevMessagesLength = useRef(0)
+
+  useEffect(() => {
+    if (prevMessagesLength.current === 0 && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+    prevMessagesLength.current = messages.length
+  }, [messages, isTyping])
+
+  useEffect(() => {
+    let isMounted = true
+    initChat()
+    
+    return () => {
+      isMounted = false
+      activeChannels.forEach(c => supabase.removeChannel(c))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleTyping = () => {
     supabase.channel(`match:${matchId}`).send({

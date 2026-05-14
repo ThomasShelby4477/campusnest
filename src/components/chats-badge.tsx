@@ -17,7 +17,8 @@ export function ChatsBadge({ variant }: Props) {
   const isActive = pathname === '/chats' || pathname.startsWith('/chats/')
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined
+    let isMounted = true
+    let activeChannels: any[] = []
 
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -42,7 +43,7 @@ export function ChatsBadge({ variant }: Props) {
         .eq('is_read', false)
         .neq('sender_id', user.id)
 
-      if (unreadMessages) {
+      if (unreadMessages && isMounted) {
         const distinctChats = new Set(unreadMessages.map(m => m.match_id)).size
         setChatsWithUnread(distinctChats)
       }
@@ -55,7 +56,7 @@ export function ChatsBadge({ variant }: Props) {
           .in('match_id', matchIds)
           .eq('is_read', false)
           .neq('sender_id', user.id)
-        if (msgs) {
+        if (msgs && isMounted) {
           setChatsWithUnread(new Set(msgs.map(m => m.match_id)).size)
         }
       }
@@ -63,13 +64,20 @@ export function ChatsBadge({ variant }: Props) {
       const channel = supabase.channel('global-chat-unread')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, refetch)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, refetch)
-        .subscribe()
-
-      cleanup = () => { supabase.removeChannel(channel) }
+        
+      if (isMounted) {
+        channel.subscribe()
+        activeChannels.push(channel)
+      } else {
+        supabase.removeChannel(channel)
+      }
     }
 
     init()
-    return () => { cleanup?.() }
+    return () => {
+      isMounted = false
+      activeChannels.forEach(c => supabase.removeChannel(c))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -162,9 +162,9 @@ function SearchContent() {
                   position={{ lat: l.latitude, lng: l.longitude }}
                   onClick={() => handleSelectListing(l)}
                 >
-                  <div className={`px-2 py-1 rounded-full text-xs font-bold shadow-lg whitespace-nowrap cursor-pointer transition-all ${
+                  <div className={`px-2 py-1 rounded-full text-xs font-bold shadow-lg whitespace-nowrap cursor-pointer transition-all border-[1.5px] border-white ${
                     selectedListing?.id === l.id
-                      ? 'bg-navy text-white scale-110'
+                      ? 'bg-navy text-white scale-110 z-10 relative'
                       : 'bg-coral text-white hover:scale-105'
                   }`}>
                     ₹{l.rent}

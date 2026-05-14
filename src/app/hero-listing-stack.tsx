@@ -108,7 +108,7 @@ export function HeroListingStack() {
                   className="object-cover"
                   sizes="380px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-navy/10 via-navy/60 to-navy/95" />
+                <div className="absolute inset-0 bg-gradient-to-b from-navy/80 via-navy/10 to-navy/95" />
               </div>
             )}
 
@@ -117,46 +117,46 @@ export function HeroListingStack() {
                 <div>
                   {/* Badges */}
                   <div className="flex gap-2 mb-5">
-                    <span className={`${ROOM_COLORS[listing.room_type] || 'bg-coral/90'} text-white px-3 py-1 rounded-full text-xs font-bold`}>
+                    <span className={`${ROOM_COLORS[listing.room_type] || 'bg-coral/90'} text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm`}>
                       {listing.room_type}
                     </span>
                     {listing.verified_status === 'VERIFIED' && (
-                      <span className="bg-emerald-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                      <span className="bg-emerald-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
                         <CheckCircle2 className="w-3 h-3" /> Verified
                       </span>
                     )}
-                    <span className="bg-white/10 text-white/80 px-3 py-1 rounded-full text-xs font-medium">
+                    <span className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm border border-white/10">
                       {listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed === 'MALE' ? 'Boys' : 'Girls'}
                     </span>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 leading-tight drop-shadow">{listing.title}</h3>
-                  <p className="text-white/80 text-sm mb-4 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <h3 className="text-2xl font-black text-white mb-2 line-clamp-2 leading-tight drop-shadow-md">{listing.title}</h3>
+                  <p className="text-white text-sm mb-4 flex items-center gap-1 drop-shadow-md font-medium">
+                    <MapPin className="w-4 h-4 shrink-0 drop-shadow-sm" />
                     <span className="truncate">{listing.address}</span>
                   </p>
 
                   {listing.distance_from_college != null && (
-                    <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs text-white font-semibold mb-4">
+                    <div className="inline-flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1 text-xs text-white font-semibold mb-4 shadow-sm">
                       <span className="w-1.5 h-1.5 rounded-full bg-coral inline-block" />
                       {listing.distance_from_college.toFixed(1)} km from campus
                     </div>
                   )}
 
                   {/* Amenity pills */}
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-2 flex-wrap drop-shadow-sm">
                     {listing.has_wifi && (
-                      <span className="bg-white/15 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
+                      <span className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
                         <Wifi className="w-3 h-3" /> WiFi
                       </span>
                     )}
                     {listing.has_ac && (
-                      <span className="bg-white/15 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
+                      <span className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
                         <Wind className="w-3 h-3" /> AC
                       </span>
                     )}
                     {listing.food_available && (
-                      <span className="bg-white/15 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
+                      <span className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
                         <Utensils className="w-3 h-3" /> Food
                       </span>
                     )}

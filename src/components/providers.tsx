@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import type { Profile } from '@/types/database'
+import { GlobalListeners } from '@/components/global-listeners'
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const { setUser, setLoading } = useAuthStore()
@@ -60,6 +61,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <TooltipProvider>
       <AuthProvider>
         {children}
+        <GlobalListeners />
         <Toaster
           position="top-right"
           richColors

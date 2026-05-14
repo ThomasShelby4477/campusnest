@@ -170,7 +170,7 @@ CREATE TABLE consent_records (
 );
 
 -- ── public_profiles view ────────────────────────────────────
-CREATE VIEW public_profiles AS
+CREATE VIEW public_profiles WITH (security_invoker = true) AS
   SELECT id, name, avatar_url, year, branch,
          verified_status, verification_badge,
          looking_for_buddy, gender

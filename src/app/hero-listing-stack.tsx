@@ -85,7 +85,7 @@ export function HeroListingStack() {
           <div
             key={listing.id}
             onClick={() => {
-              if (isFront) router.push(`/listings/${listing.id}`)
+              if (isFront) router.push(`/search?listingId=${listing.id}`)
             }}
             className={`absolute w-full h-full rounded-3xl overflow-hidden border border-white/20 backdrop-blur-md transition-all duration-700 ${isFront ? 'cursor-pointer hover:border-coral/50' : ''}`}
             style={{

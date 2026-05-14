@@ -73,6 +73,23 @@ function SearchContent() {
   useEffect(() => { fetchSaved() }, [fetchSaved])
   useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, gender]) // eslint-disable-line
 
+  // Handle ?listingId=... to auto-open a listing from external links
+  useEffect(() => {
+    const lid = searchParams.get('listingId')
+    if (lid && !selectedListing) {
+      const fetchSingle = async () => {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('listings')
+          .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey ( name, avatar_url )`)
+          .eq('id', lid)
+          .single()
+        if (data) setSelectedListing(data)
+      }
+      fetchSingle()
+    }
+  }, [searchParams]) // eslint-disable-line
+
   // Reset to list on desktop
   useEffect(() => {
     const handle = () => { if (window.innerWidth >= 1024) setViewMode('list') }

@@ -387,7 +387,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
                         ? 'bg-coral/5 border border-coral/20 text-text-primary rounded-bl-sm'
                         : 'bg-white border border-border-light text-text-primary rounded-bl-sm'
                   }`}>
-                    <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
                   </div>
                   <div className="flex items-center gap-1 mt-1 text-[10px] text-text-muted font-medium px-1">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

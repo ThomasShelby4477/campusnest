@@ -53,12 +53,16 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
   const prevMessagesLength = useRef(0)
 
   useEffect(() => {
-    if (prevMessagesLength.current === 0 && messages.length > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
-    } else {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
+    if (messages.length === 0) return
+
+    const isFirstLoad = prevMessagesLength.current === 0
+    const timeoutId = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: isFirstLoad ? 'auto' : 'smooth' })
+    }, 100)
+
     prevMessagesLength.current = messages.length
+
+    return () => clearTimeout(timeoutId)
   }, [messages, isTyping])
 
   useEffect(() => {

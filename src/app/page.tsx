@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Shield, Users, MapPin, MessageCircle, Sparkles, ArrowRight, CheckCircle2, Star } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
-import { HeroCarousel } from '@/components/hero-carousel'
+import { Shield, Users, MapPin, MessageCircle, Sparkles, ArrowRight, Star } from 'lucide-react'
+import { HeroListingStack } from './hero-listing-stack'
 
 const features = [
   {
@@ -48,17 +47,7 @@ const steps = [
   { num: '03', title: 'Connect & Move In', desc: 'Chat with matches and landlords, visit properties, and move into your new home.' },
 ]
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  
-  // Fetch the latest 5 active listings with owner details for the hero carousel
-  const { data: latestListings } = await supabase
-    .from('listings')
-    .select('*, owner:profiles(*)')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
+export default function HomePage() {
   return (
     <div className="bg-white">
 
@@ -100,9 +89,9 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Hero visual — animated card carousel */}
-            <div className="hidden lg:flex justify-center relative" style={{ animationDelay: '0.2s' }}>
-              <HeroCarousel listings={latestListings || []} />
+            {/* Hero visual — real animated listing stack */}
+            <div className="hidden lg:flex justify-center items-center relative animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <HeroListingStack />
             </div>
           </div>
         </div>

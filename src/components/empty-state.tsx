@@ -93,7 +93,7 @@ function EmptyIcon({ type }: { type: EmptyStateProps['icon'] }) {
 
 export function EmptyState({ icon, title, description, actionLabel, actionHref, onAction }: EmptyStateProps) {
   return (
-    <div className="bg-white border border-border-light rounded-2xl p-12 text-center shadow-sm max-w-md mx-auto">
+    <div className="bg-white border border-border-light rounded-2xl p-12 text-center shadow-sm max-w-md mx-auto animate-scale-in">
       <div className="mb-6">
         <EmptyIcon type={icon} />
       </div>
@@ -101,10 +101,10 @@ export function EmptyState({ icon, title, description, actionLabel, actionHref, 
       <p className="text-text-muted mb-8 leading-relaxed">{description}</p>
       {actionLabel && (actionHref ? (
         <Link href={actionHref}>
-          <Button className="h-12 px-8 bg-navy hover:bg-navy-dark text-white text-base">{actionLabel}</Button>
+          <Button className="h-12 px-8 bg-navy hover:bg-navy-dark text-white text-base transition-all hover:-translate-y-0.5 hover:shadow-lg">{actionLabel}</Button>
         </Link>
       ) : onAction ? (
-        <Button className="h-12 px-8 bg-navy hover:bg-navy-dark text-white text-base" onClick={onAction}>{actionLabel}</Button>
+        <Button className="h-12 px-8 bg-navy hover:bg-navy-dark text-white text-base transition-all hover:-translate-y-0.5 hover:shadow-lg" onClick={onAction}>{actionLabel}</Button>
       ) : null)}
     </div>
   )

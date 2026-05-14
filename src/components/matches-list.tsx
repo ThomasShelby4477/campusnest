@@ -89,8 +89,19 @@ function MatchesListInner() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center py-12">
-        <span className="w-8 h-8 border-4 border-coral/30 border-t-coral rounded-full animate-spin" />
+      <div className="w-full max-w-2xl mx-auto py-4">
+        <div className="bg-white rounded-2xl border border-border-light shadow-sm overflow-hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`flex items-center gap-4 p-4 ${i !== 3 ? 'border-b border-border-light' : ''}`}>
+              <div className="w-14 h-14 rounded-full bg-muted-bg animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted-bg animate-pulse rounded-full w-1/3" />
+                <div className="h-3 bg-muted-bg animate-pulse rounded-full w-2/3" />
+              </div>
+              <div className="h-3 bg-muted-bg animate-pulse rounded-full w-10 shrink-0" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -116,7 +127,8 @@ function MatchesListInner() {
           <Link 
             key={match.id} 
             href={`/chat/${match.id}`}
-            className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-muted-bg transition-colors ${i !== matches.length - 1 ? 'border-b border-border-light' : ''}`}
+            className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-muted-bg active:bg-navy/5 transition-all duration-200 animate-fade-in ${i !== matches.length - 1 ? 'border-b border-border-light' : ''}`}
+            style={{ animationDelay: `${i * 50}ms`, opacity: 0, animationFillMode: 'forwards' }}
           >
             <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-navy/5 shrink-0">
               {match.otherUser.avatar_url ? (

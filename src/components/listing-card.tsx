@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Heart, MapPin, CheckCircle, Wifi, Wind, UtensilsCrossed, BedDouble } from 'lucide-react'
 import { toast } from 'sonner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ListingCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,61 +49,67 @@ export function ListingCard({ listing, currentUserId, initialSaved = false, onSe
   const genderLabel = listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed === 'MALE' ? 'Boys' : 'Girls'
 
   const inner = (
-    <div className="group flex bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer">
+    <div className="group flex bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
 
-      {/* Image — fixed 40% width */}
+      {/* Image */}
       <div className="relative w-[38%] shrink-0 bg-muted-bg overflow-hidden">
         <Image
           src={primaryImage}
           alt={listing.title}
           fill
           sizes="200px"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          className="object-cover group-hover:scale-110 transition-transform duration-700"
         />
-
-        {/* Verified badge */}
         {listing.is_verified && (
           <div className="absolute top-2 left-2 bg-success text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5">
             <CheckCircle className="w-2.5 h-2.5" /> Verified
           </div>
         )}
-
-        {/* Save button */}
         <button
           onClick={toggleSave}
-          className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow hover:scale-110 transition-transform"
+          className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow hover:scale-110 active:scale-95 transition-transform"
           aria-label={isSaved ? 'Unsave' : 'Save'}
         >
-          <Heart className={`w-3.5 h-3.5 transition-colors ${isSaved ? 'fill-coral text-coral' : 'text-text-muted'}`} />
+          <Heart className={`w-3.5 h-3.5 transition-all duration-200 ${isSaved ? 'fill-coral text-coral scale-110' : 'text-text-muted'}`} />
         </button>
       </div>
 
-      {/* Content — right side */}
+      {/* Content */}
       <div className="flex flex-col flex-1 p-3 min-w-0">
-
-        {/* Type + Gender pills */}
         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
           <span className="px-2 py-0.5 bg-navy/10 text-navy text-[11px] font-semibold rounded-full">{listing.room_type}</span>
           <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{genderLabel}</span>
           <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{listing.furnished}</span>
         </div>
 
-        {/* Title */}
-        <h3 className="font-bold text-text-primary text-sm leading-snug line-clamp-2 group-hover:text-coral transition-colors mb-1">
+        <h3 className="font-bold text-text-primary text-sm leading-snug line-clamp-2 group-hover:text-coral transition-colors duration-200 mb-1">
           {listing.title}
         </h3>
 
-        {/* Address */}
         <div className="flex items-start gap-1 text-text-muted mb-2">
           <MapPin className="w-3 h-3 shrink-0 mt-[3px]" />
           <span className="text-[11px] line-clamp-1">{listing.address}</span>
         </div>
 
-        {/* Amenities row */}
         <div className="flex items-center gap-2 mb-2.5">
-          {listing.has_wifi && <Wifi className="w-3.5 h-3.5 text-success" />}
-          {listing.has_ac && <Wind className="w-3.5 h-3.5 text-blue-400" />}
-          {listing.food_available && <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />}
+          {listing.has_wifi && (
+            <Tooltip>
+              <TooltipTrigger><Wifi className="w-3.5 h-3.5 text-success cursor-default" /></TooltipTrigger>
+              <TooltipContent>WiFi included</TooltipContent>
+            </Tooltip>
+          )}
+          {listing.has_ac && (
+            <Tooltip>
+              <TooltipTrigger><Wind className="w-3.5 h-3.5 text-blue-400 cursor-default" /></TooltipTrigger>
+              <TooltipContent>Air Conditioning</TooltipContent>
+            </Tooltip>
+          )}
+          {listing.food_available && (
+            <Tooltip>
+              <TooltipTrigger><UtensilsCrossed className="w-3.5 h-3.5 text-orange-400 cursor-default" /></TooltipTrigger>
+              <TooltipContent>Food available</TooltipContent>
+            </Tooltip>
+          )}
           {listing.roommates_needed > 1 && (
             <span className="flex items-center gap-0.5 text-[11px] text-text-muted">
               <BedDouble className="w-3.5 h-3.5" /> {listing.roommates_needed}
@@ -115,7 +122,6 @@ export function ListingCard({ listing, currentUserId, initialSaved = false, onSe
           )}
         </div>
 
-        {/* Price */}
         <div className="mt-auto flex items-end justify-between">
           <div>
             <span className="text-lg font-black text-navy">₹{listing.rent.toLocaleString('en-IN')}</span>

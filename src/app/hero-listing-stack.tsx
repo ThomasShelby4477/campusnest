@@ -94,7 +94,7 @@ export function HeroListingStack() {
               transform: `rotate(${rotate}deg)`,
               zIndex: stackPos + 1,
               background: isFront
-                ? 'linear-gradient(145deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.95) 100%)'
+                ? '#0f172a' // Fallback behind image
                 : `rgba(15,23,42,${0.55 + stackPos * 0.1})`,
             }}
           >
@@ -105,10 +105,10 @@ export function HeroListingStack() {
                   src={primaryImage}
                   alt={listing.title}
                   fill
-                  className="object-cover opacity-[0.35]"
+                  className="object-cover"
                   sizes="380px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-navy/40 via-navy/70 to-navy/98" />
+                <div className="absolute inset-0 bg-gradient-to-b from-navy/10 via-navy/60 to-navy/95" />
               </div>
             )}
 

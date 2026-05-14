@@ -81,7 +81,7 @@ export function HeroCarousel({ listings }: { listings: any[] }) {
             <div>
               <div className="flex gap-2 mb-6">
                 <span className="bg-coral/90 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
-                  {listing.type}
+                  {listing.room_type}
                 </span>
                 {listing.owner?.verified_status === 'VERIFIED' && (
                   <span className="bg-success/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">

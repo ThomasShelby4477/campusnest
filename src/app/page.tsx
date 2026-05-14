@@ -55,7 +55,7 @@ export default async function HomePage() {
   const { data: latestListings } = await supabase
     .from('listings')
     .select('*, owner:profiles(*)')
-    .eq('status', 'ACTIVE')
+    .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(5)
 

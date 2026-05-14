@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Shield, Users, MapPin, MessageCircle, Sparkles, ArrowRight, CheckCircle2, Star } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { HeroCarousel } from '@/components/hero-carousel'
 
 const features = [
   {
@@ -46,7 +48,17 @@ const steps = [
   { num: '03', title: 'Connect & Move In', desc: 'Chat with matches and landlords, visit properties, and move into your new home.' },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  
+  // Fetch the latest 5 active listings with owner details for the hero carousel
+  const { data: latestListings } = await supabase
+    .from('listings')
+    .select('*, owner:profiles(*)')
+    .eq('status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
   return (
     <div className="bg-white">
 
@@ -88,41 +100,9 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Hero visual — stylized card stack */}
+            {/* Hero visual — animated card carousel */}
             <div className="hidden lg:flex justify-center relative" style={{ animationDelay: '0.2s' }}>
-              <div className="relative w-[380px] h-[480px]">
-                {/* Background card */}
-                <div className="absolute top-8 left-8 w-full h-full rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm transform rotate-6" />
-                {/* Middle card */}
-                <div className="absolute top-4 left-4 w-full h-full rounded-3xl bg-white/10 border border-white/10 backdrop-blur-sm transform rotate-3" />
-                {/* Front card */}
-                <div className="relative w-full h-full rounded-3xl bg-gradient-to-br from-white/15 to-white/5 border border-white/20 backdrop-blur-md p-8 flex flex-col justify-between overflow-hidden">
-                  <div>
-                    <div className="flex gap-2 mb-6">
-                      <span className="bg-coral/90 text-white px-3 py-1 rounded-full text-xs font-bold">PG</span>
-                      <span className="bg-success/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Verified
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Sunny PG Near Gate 2</h3>
-                    <p className="text-white/60 text-sm mb-4 flex items-center gap-1">
-                      <MapPin className="w-4 h-4" /> 0.8 km from NFSU
-                    </p>
-                    <p className="text-3xl font-black text-white">
-                      ₹6,500<span className="text-base font-normal text-white/50">/mo</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-coral/30 flex items-center justify-center text-white font-bold">R</div>
-                    <div>
-                      <p className="text-white font-bold text-sm">Rahul S.</p>
-                      <p className="text-white/50 text-xs">NFSU &apos;26 • Cybersecurity</p>
-                    </div>
-                  </div>
-                  {/* Floating badge */}
-                  <div className="absolute -bottom-3 -right-3 w-24 h-24 rounded-full bg-coral/20 blur-xl" />
-                </div>
-              </div>
+              <HeroCarousel listings={latestListings || []} />
             </div>
           </div>
         </div>

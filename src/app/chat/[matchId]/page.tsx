@@ -148,7 +148,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
         (payload) => {
           setMessages(prev => [...prev, payload.new])
           if (payload.new.sender_id !== user.id && document.hasFocus()) {
-            supabase.from('messages').update({ is_read: true }).eq('id', payload.new.id)
+            supabase.from('messages').update({ is_read: true }).eq('id', payload.new.id).then()
           }
         }
       )

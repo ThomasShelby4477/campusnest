@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,22 @@ interface Props {
   onBack: () => void
   onSubmit: () => void
   isSubmitting: boolean
+}
+
+function ImagePreview({ file }: { file: File }) {
+  const [url, setUrl] = useState('')
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file)
+    setUrl(objectUrl)
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [file])
+  
+  if (!url) return <div className="w-12 h-12 bg-muted-bg rounded-md shrink-0 flex items-center justify-center"><ImageIcon className="w-6 h-6 text-text-muted" /></div>
+  return (
+    <div className="w-12 h-12 bg-muted-bg rounded-md shrink-0 overflow-hidden relative border border-border-light">
+      <img src={url} alt={file.name} className="w-full h-full object-cover" />
+    </div>
+  )
 }
 
 export function ImagesStep({ onBack, onSubmit, isSubmitting }: Props) {
@@ -103,9 +119,7 @@ export function ImagesStep({ onBack, onSubmit, isSubmitting }: Props) {
                     <button type="button" onClick={() => moveImage(i, 'down')} disabled={i === store.images.length - 1} className="hover:text-navy disabled:opacity-30">▼</button>
                   </div>
                   
-                  <div className="w-12 h-12 bg-muted-bg rounded-md flex items-center justify-center shrink-0">
-                    <ImageIcon className="w-6 h-6 text-text-muted" />
-                  </div>
+                  <ImagePreview file={file} />
                   
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{file.name}</p>

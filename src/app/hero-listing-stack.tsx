@@ -108,7 +108,6 @@ export function HeroListingStack() {
                   className="object-cover"
                   sizes="380px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-navy/80 via-navy/10 to-navy/95" />
               </div>
             )}
 

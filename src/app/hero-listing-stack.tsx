@@ -89,8 +89,8 @@ export function HeroListingStack() {
               transform: `rotate(${rotate}deg)`,
               zIndex: stackPos + 1,
               background: isFront
-                ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
-                : `rgba(255,255,255,${0.03 + stackPos * 0.02})`,
+                ? 'linear-gradient(145deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.95) 100%)'
+                : `rgba(15,23,42,${0.55 + stackPos * 0.1})`,
             }}
           >
             {/* Image area */}
@@ -100,10 +100,10 @@ export function HeroListingStack() {
                   src={primaryImage}
                   alt={listing.title}
                   fill
-                  className="object-cover opacity-25"
+                  className="object-cover opacity-[0.35]"
                   sizes="380px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-navy/60 to-navy/95" />
+                <div className="absolute inset-0 bg-gradient-to-b from-navy/40 via-navy/70 to-navy/98" />
               </div>
             )}
 
@@ -125,14 +125,14 @@ export function HeroListingStack() {
                     </span>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 leading-tight">{listing.title}</h3>
-                  <p className="text-white/60 text-sm mb-4 flex items-center gap-1">
+                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 leading-tight drop-shadow">{listing.title}</h3>
+                  <p className="text-white/80 text-sm mb-4 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{listing.address}</span>
                   </p>
 
                   {listing.distance_from_college != null && (
-                    <div className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-xs text-white/80 font-medium mb-4">
+                    <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs text-white font-semibold mb-4">
                       <span className="w-1.5 h-1.5 rounded-full bg-coral inline-block" />
                       {listing.distance_from_college.toFixed(1)} km from campus
                     </div>
@@ -141,17 +141,17 @@ export function HeroListingStack() {
                   {/* Amenity pills */}
                   <div className="flex gap-2 flex-wrap">
                     {listing.has_wifi && (
-                      <span className="bg-white/10 text-white/70 px-2.5 py-1 rounded-full text-xs flex items-center gap-1">
+                      <span className="bg-white/15 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
                         <Wifi className="w-3 h-3" /> WiFi
                       </span>
                     )}
                     {listing.has_ac && (
-                      <span className="bg-white/10 text-white/70 px-2.5 py-1 rounded-full text-xs flex items-center gap-1">
+                      <span className="bg-white/15 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
                         <Wind className="w-3 h-3" /> AC
                       </span>
                     )}
                     {listing.food_available && (
-                      <span className="bg-white/10 text-white/70 px-2.5 py-1 rounded-full text-xs flex items-center gap-1">
+                      <span className="bg-white/15 text-white px-2.5 py-1 rounded-full text-xs flex items-center gap-1 font-medium">
                         <Utensils className="w-3 h-3" /> Food
                       </span>
                     )}

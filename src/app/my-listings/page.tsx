@@ -82,27 +82,33 @@ export default function MyListingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted-bg py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-20 sm:pb-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sticky top-16 z-30 bg-muted-bg/95 backdrop-blur-sm py-4 -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-navy/10 flex items-center justify-center">
-              <Building className="w-6 h-6 text-navy" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">My Listings</h1>
-              <p className="text-text-muted mt-1">Manage your properties</p>
-            </div>
-          </div>
-          <Link href="/create-listing">
-            <Button className="bg-coral hover:bg-coral-dark text-white">
-              + Post New Listing
-            </Button>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-muted-bg pb-16">
 
+      {/* Warm gradient band at top */}
+      <div className="bg-gradient-to-b from-navy/5 via-navy/[0.02] to-transparent pt-10 pb-6 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-coral/10 flex items-center justify-center">
+                <Building className="w-5 h-5 text-coral" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-navy">My Listings</h1>
+                <p className="text-sm text-text-muted">Manage your properties</p>
+              </div>
+            </div>
+            <Link href="/create-listing">
+              <Button className="bg-coral hover:bg-coral-dark text-white font-semibold rounded-2xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]">
+                + Post New Listing
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {listings.length === 0 ? (
-          <div className="mt-8">
+          <div className="bg-white rounded-3xl border border-border-light shadow-lg shadow-navy/[0.03] p-12">
             <EmptyState
               icon="listings"
               title="You have no active listings"
@@ -112,7 +118,7 @@ export default function MyListingsPage() {
             />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {listings.map(listing => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const primaryImage = listing.listing_images?.find((img: any) => img.is_primary)?.url 
@@ -120,54 +126,70 @@ export default function MyListingsPage() {
                 || '/placeholder-listing.png'
 
               return (
-                <div key={listing.id} className="bg-white border border-border-light rounded-xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row gap-6 items-start">
+                <div key={listing.id} className="group bg-white rounded-3xl border border-border-light shadow-sm hover:shadow-lg hover:shadow-navy/[0.05] transition-all duration-300 overflow-hidden flex flex-col sm:flex-row">
                   
-                  <div className="relative w-full sm:w-48 h-48 sm:h-32 rounded-lg overflow-hidden shrink-0 bg-muted-bg">
-                    <Image src={primaryImage} alt={listing.title} fill className="object-cover" />
+                  {/* Image */}
+                  <div className="relative w-full sm:w-56 h-48 sm:h-auto shrink-0 bg-muted-bg overflow-hidden">
+                    <Image src={primaryImage} alt={listing.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {listing.is_verified && (
+                      <div className="absolute top-3 left-3 px-2.5 py-1 bg-success text-white text-[10px] font-bold rounded-full flex items-center gap-1 shadow-md">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                        Verified
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex-1 min-w-0 w-full">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 p-5 flex flex-col">
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
-                      <h3 className="text-xl font-bold text-text-primary truncate" title={listing.title}>
+                      <h3 className="text-lg font-bold text-navy truncate pr-2" title={listing.title}>
                         {listing.title}
                       </h3>
-                      <div className="flex items-center gap-2 shrink-0 text-sm font-semibold">
+                      <div className="shrink-0">
                         {listing.is_verified ? (
-                          <span className="px-2.5 py-1 bg-success/10 text-success rounded-md flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-success"></span> Verified
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-success/10 text-success text-xs font-semibold rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-success" /> Verified
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 bg-warning/10 text-warning-dark rounded-md flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" /> Pending Review
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-warning/10 text-warning text-xs font-semibold rounded-full">
+                            <Clock className="w-3 h-3" /> Pending Review
                           </span>
                         )}
                       </div>
                     </div>
                     
-                    <p className="text-2xl font-bold text-navy mb-3">₹{listing.rent}</p>
+                    <div className="flex items-baseline gap-1 mb-3">
+                      <span className="text-2xl font-black text-navy">₹{listing.rent.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-text-muted font-medium">/month</span>
+                    </div>
                     
-                    <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-text-muted mb-4">
-                      <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> {listing.address.substring(0, 30)}...</span>
-                      <span className="flex items-center gap-1.5"><Eye className="w-4 h-4"/> {listing.views} views</span>
-                      <span className="px-2 py-0.5 bg-muted-bg rounded">{listing.room_type}</span>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-text-muted mb-4">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-coral" />
+                        {listing.address.length > 35 ? listing.address.substring(0, 35) + '...' : listing.address}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5 text-text-muted" /> {listing.views} views
+                      </span>
+                      <span className="px-2 py-0.5 bg-muted-bg rounded-full text-xs font-medium">{listing.room_type}</span>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2 mt-auto">
                       <Link href={`/listings/${listing.id}`}>
-                        <Button variant="outline" size="sm" className="w-full sm:w-auto h-9">
-                          <Eye className="w-4 h-4 mr-2" /> View Public
+                        <Button variant="outline" size="sm" className="h-9 rounded-xl font-medium">
+                          <Eye className="w-3.5 h-3.5 mr-1.5" /> View
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm" className="w-full sm:w-auto h-9 border-navy text-navy hover:bg-navy/5">
-                        <Pencil className="w-4 h-4 mr-2" /> Edit
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl font-medium border-navy/20 text-navy hover:bg-navy/5">
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="w-full sm:w-auto h-9 text-danger hover:text-danger hover:bg-danger/10 sm:ml-auto"
+                        className="h-9 rounded-xl font-medium text-danger hover:text-danger hover:bg-danger/10 sm:ml-auto"
                         onClick={() => setDeleteId(listing.id)}
                       >
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
                       </Button>
                     </div>
                   </div>

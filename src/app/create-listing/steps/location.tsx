@@ -80,9 +80,9 @@ export function LocationStep({ onNext, onBack }: Props) {
         </div>
 
         {/* Map with soft frame */}
-        <div className="relative rounded-2xl overflow-hidden shadow-inner border-2 border-border-light">
+        <div className="relative h-[340px] rounded-2xl overflow-hidden shadow-inner border-2 border-border-light">
           {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-            <div className="w-full h-[340px] flex items-center justify-center bg-muted-bg text-text-muted text-sm text-center p-4">
+            <div className="w-full h-full flex items-center justify-center bg-muted-bg text-text-muted text-sm text-center p-4">
               Google Maps API Key missing in environment variables.
             </div>
           ) : (
@@ -94,6 +94,7 @@ export function LocationStep({ onNext, onBack }: Props) {
                 onClick={handleMapClick}
                 gestureHandling="greedy"
                 disableDefaultUI={true}
+                style={{ width: '100%', height: '100%' }}
               >
                 {/* Selected location marker */}
                 {store.latitude != null && store.longitude != null && (

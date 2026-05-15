@@ -40,29 +40,38 @@ export async function POST(req: Request) {
     const posterId = (listing as any).poster_id
     const listingTitle = listing.title
     const reasonText = reason?.trim() || 'This listing has been removed by an administrator.'
-    const posterName = (listing as any).profiles?.name || 'User'
+    const embedded = (listing as any)['profiles!listings_poster_id_fkey'] || (listing as any).profiles || {}
+    const posterName = embedded.name || 'User'
 
-    // Soft-delete the listing with removal metadata
-    const { error: updateError } = await supabaseAdmin
+    // Deactivate the listing (always works)
+    const { error: deactivateError } = await supabaseAdmin
       .from('listings')
-      .update({
-        is_active: false,
-        removal_reason: reasonText,
-        removed_at: new Date().toISOString(),
-        removed_by: user.id,
-      })
+      .update({ is_active: false })
       .eq('id', listingId)
 
-    if (updateError) throw updateError
+    if (deactivateError) throw deactivateError
 
-    // Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      actor_id: user.id,
-      action: 'REMOVE_LISTING',
-      target_type: 'listing',
-      target_id: listingId,
-      metadata: { poster_id: posterId, poster_name: posterName, listing_title: listingTitle, reason: reasonText },
-    })
+    // Persist removal metadata (best-effort — columns may not exist until migration 019 is applied)
+    try {
+      await supabaseAdmin.from('listings')
+        .update({
+          removal_reason: reasonText,
+          removed_at: new Date().toISOString(),
+          removed_by: user.id,
+        })
+        .eq('id', listingId)
+    } catch { /* columns may not exist yet — run supabase db push */ }
+
+    // Audit log (best-effort)
+    try {
+      await supabaseAdmin.from('audit_logs').insert({
+        actor_id: user.id,
+        action: 'REMOVE_LISTING',
+        target_type: 'listing',
+        target_id: listingId,
+        metadata: { poster_id: posterId, poster_name: posterName, listing_title: listingTitle, reason: reasonText },
+      })
+    } catch { /* audit_logs RLS or table may not be ready */ }
 
     // Notify the poster
     if (posterId) {

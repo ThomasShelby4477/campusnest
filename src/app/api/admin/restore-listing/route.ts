@@ -36,21 +36,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from('listings')
-      .update({
-        is_active: true,
-        removal_reason: null,
-        removed_at: null,
-        removed_by: null,
-      })
-      .eq('id', listingId)
-
-    if (updateError) throw updateError
-
     const posterId = (listing as any).poster_id
     const listingTitle = listing.title
-    const posterName = (listing as any).profiles?.name || 'User'
+    const embedded = (listing as any)['profiles!listings_poster_id_fkey'] || (listing as any).profiles || {}
+    const posterName = embedded.name || 'User'
+
+    // Reactivate the listing (always works)
+    const { error: activateError } = await supabaseAdmin
+      .from('listings')
+      .update({ is_active: true })
+      .eq('id', listingId)
+
+    if (activateError) throw activateError
+
+    // Clear removal metadata (best-effort — columns may not exist until migration 019 is applied)
+    try {
+      await supabaseAdmin.from('listings')
+        .update({
+          removal_reason: null,
+          removed_at: null,
+          removed_by: null,
+        })
+        .eq('id', listingId)
+    } catch { /* columns may not exist yet */ }
 
     if (posterId) {
       await supabaseAdmin.from('notifications').insert({
@@ -61,6 +69,7 @@ export async function POST(req: Request) {
         link: '/my-listings',
       })
 
+      // Attempt push notification
       try {
         const { data: profileWithToken } = await supabaseAdmin
           .from('profiles')
@@ -88,14 +97,16 @@ export async function POST(req: Request) {
       }
     }
 
-    // Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      actor_id: user.id,
-      action: 'RESTORE_LISTING',
-      target_type: 'listing',
-      target_id: listingId,
-      metadata: { poster_id: posterId, poster_name: posterName, listing_title: listingTitle },
-    })
+    // Audit log (best-effort)
+    try {
+      await supabaseAdmin.from('audit_logs').insert({
+        actor_id: user.id,
+        action: 'RESTORE_LISTING',
+        target_type: 'listing',
+        target_id: listingId,
+        metadata: { poster_id: posterId, poster_name: posterName, listing_title: listingTitle },
+      })
+    } catch { /* audit_logs may not be ready */ }
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

@@ -16,7 +16,7 @@ export async function POST() {
       .eq('id', user.id)
       .single()
 
-    if (profile?.verified_status !== 'REJECTED') {
+    if (profile?.verified_status !== 'REJECTED' && profile?.verified_status !== 'PENDING') {
       return NextResponse.json({ error: 'Your account is not in a rejected state' }, { status: 400 })
     }
 

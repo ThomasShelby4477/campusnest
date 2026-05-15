@@ -13,27 +13,6 @@ export function PendingStep() {
   const { user, updateUser } = useAuthStore()
   const { setStep } = useSignupStore()
   const [checking, setChecking] = useState(false)
-  const [reverifyLoading, setReverifyLoading] = useState(false)
-
-  const handleRequestReverify = async () => {
-    setReverifyLoading(true)
-    try {
-      const res = await fetch('/api/profile/request-reverify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to request re-verification')
-      }
-      updateUser({ ...user!, verified_status: 'PENDING', rejection_reason: null })
-      setStep('id-upload')
-    } catch {
-      console.error('Re-verify request failed')
-    } finally {
-      setReverifyLoading(false)
-    }
-  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -103,18 +82,10 @@ export function PendingStep() {
             </div>
           )}
           <Button
-            onClick={handleRequestReverify}
-            disabled={reverifyLoading}
+            onClick={() => router.push('/reverify')}
             className="w-full h-12 bg-coral hover:bg-coral-dark text-white font-semibold"
           >
-            {reverifyLoading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Requesting...
-              </span>
-            ) : (
-              <><RefreshCw className="w-4 h-4 mr-2" /> Request Re-verification</>
-            )}
+            <RefreshCw className="w-4 h-4 mr-2" /> Go to Re-verification
           </Button>
         </CardContent>
       </Card>

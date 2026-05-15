@@ -40,8 +40,6 @@ export async function POST(req: Request) {
 
     if (action === 'REJECTED') {
       updateData.rejection_reason = reason || 'Your verification documents could not be accepted.'
-      updateData.student_id_path = null
-      updateData.selfie_path = null
     }
 
     if (action === 'VERIFIED') {
@@ -62,7 +60,7 @@ export async function POST(req: Request) {
         type: 'VERIFICATION_REJECTED',
         title: 'Verification Update',
         body: `Your ID verification was not approved. Reason: ${updateData.rejection_reason}`,
-        link: '/profile',
+        link: '/reverify',
       })
     } else if (action === 'VERIFIED') {
       await supabaseAdmin.from('notifications').insert({

@@ -265,24 +265,10 @@ export default function ProfilePage() {
                   Please update your documents and request re-verification.
                 </p>
                 <Button
-                  onClick={async () => {
-                    try {
-                      const res = await fetch('/api/profile/request-reverify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                      })
-                      const data = await res.json()
-                      if (!res.ok || data.error) throw new Error(data.error)
-                      setUser({ ...user, verified_status: 'PENDING', rejection_reason: null })
-                      toast.success('Re-verification requested! Please re-upload your documents.')
-                      router.push('/profile')
-                    } catch {
-                      toast.error('Failed to request re-verification')
-                    }
-                  }}
+                  onClick={() => router.push('/reverify')}
                   className="bg-coral hover:bg-coral-dark text-white font-semibold rounded-xl"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" /> Request Re-verification
+                  <RefreshCw className="w-4 h-4 mr-2" /> Go to Re-verification
                 </Button>
               </div>
             </div>

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAdmin.storage
-      .from('private')
+      .from('id-cards')
       .createSignedUrl(path, 300) // 5 min expiry
 
     if (error) {

@@ -103,9 +103,8 @@ export function ListingsClient({ initialListings }: { initialListings: any[] }) 
   }
 
   const getPublicImageUrl = (path: string) => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (!url) return '/placeholder-listing.png'
-    return `${url}/storage/v1/object/public/listings/${path}`
+    if (!path) return '/placeholder-listing.png'
+    return path
   }
 
   if (initialListings.length === 0) {
@@ -181,7 +180,7 @@ export function ListingsClient({ initialListings }: { initialListings: any[] }) 
                   {/* Thumbnail */}
                   <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted-bg shrink-0">
                     {primaryImg ? (
-                      <img src={getPublicImageUrl(primaryImg)} alt={l.title} className="w-full h-full object-cover" />
+                      <img src={getPublicImageUrl(primaryImg)} alt={l.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" crossOrigin="anonymous" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ImageIcon className="w-6 h-6 text-text-muted" />
@@ -224,7 +223,7 @@ export function ListingsClient({ initialListings }: { initialListings: any[] }) 
                         <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
                           {allImages.map((img: any, i: number) => (
                             <div key={i} className={`relative w-32 h-24 rounded-xl overflow-hidden shrink-0 bg-muted-bg border-2 ${img.is_primary ? 'border-coral' : 'border-border-light'}`}>
-                              <img src={getPublicImageUrl(img.url)} alt={`Image ${i + 1}`} className="w-full h-full object-cover" />
+                              <img src={getPublicImageUrl(img.url)} alt={`Image ${i + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" crossOrigin="anonymous" />
                               {img.is_primary && (
                                 <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-coral text-white px-1.5 py-0.5 rounded-full">Primary</span>
                               )}

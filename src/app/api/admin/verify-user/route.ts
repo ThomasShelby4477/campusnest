@@ -23,22 +23,90 @@ export async function POST(req: Request) {
     }
 
     // 3. Process the action using the admin client (bypasses RLS)
-    const { userId, action } = await req.json()
+    const { userId, action, reason } = await req.json()
     
     if (!userId || !['VERIFIED', 'REJECTED'].includes(action)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
 
+    // Fetch user profile for notification
+    const { data: targetProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('name, email')
+      .eq('id', userId)
+      .single()
+
+    const updateData: Record<string, any> = { verified_status: action }
+
+    if (action === 'REJECTED') {
+      updateData.rejection_reason = reason || 'Your verification documents could not be accepted.'
+      updateData.student_id_path = null
+      updateData.selfie_path = null
+    }
+
+    if (action === 'VERIFIED') {
+      updateData.rejection_reason = null
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({ verified_status: action })
+      .update(updateData)
       .eq('id', userId)
 
     if (updateError) throw updateError
 
+    // Create notification for the user
+    if (action === 'REJECTED') {
+      await supabaseAdmin.from('notifications').insert({
+        user_id: userId,
+        type: 'VERIFICATION_REJECTED',
+        title: 'Verification Update',
+        body: `Your ID verification was not approved. Reason: ${updateData.rejection_reason}`,
+        link: '/profile',
+      })
+    } else if (action === 'VERIFIED') {
+      await supabaseAdmin.from('notifications').insert({
+        user_id: userId,
+        type: 'VERIFICATION_APPROVED',
+        title: 'Verification Approved',
+        body: 'Your student ID has been verified. You now have full access to CampusNest!',
+        link: '/search',
+      })
+    }
+
+    // Try sending push notification via Edge Function
+    if (targetProfile) {
+      try {
+        const { data: profileWithToken } = await supabaseAdmin
+          .from('profiles')
+          .select('fcm_token')
+          .eq('id', userId)
+          .single()
+
+        if (profileWithToken?.fcm_token) {
+          await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-push`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              fcm_token: profileWithToken.fcm_token,
+              title: action === 'VERIFIED' ? 'Verification Approved' : 'Verification Update',
+              body: action === 'VERIFIED'
+                ? 'Your ID has been verified. Welcome to CampusNest!'
+                : 'Your verification needs attention. Check the app for details.',
+              data: { link: '/profile' },
+            }),
+          })
+        }
+      } catch {
+        // Push notification is best-effort — never fail the main operation
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (err: any) {
-    // [SECURITY M-2] Log the full error server-side but never send internal details to the client
     console.error('Admin verification error:', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X, Camera, Loader2 } from 'lucide-react'
+import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X, Camera, Loader2, RefreshCw } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, setUser } = useAuthStore()
@@ -246,6 +246,48 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Rejection status + re-verification */}
+        {user.verified_status === 'REJECTED' && (
+          <div className="bg-white rounded-2xl border border-danger/20 p-6 sm:p-8 shadow-sm mb-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center shrink-0">
+                <Shield className="w-5 h-5 text-danger" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-bold text-navy mb-1">Verification Rejected</h2>
+                {user.rejection_reason && (
+                  <p className="text-sm text-text-muted mb-3 leading-relaxed">
+                    Reason: {user.rejection_reason}
+                  </p>
+                )}
+                <p className="text-sm text-text-muted mb-4">
+                  Please update your documents and request re-verification.
+                </p>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/profile/request-reverify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                      })
+                      const data = await res.json()
+                      if (!res.ok || data.error) throw new Error(data.error)
+                      setUser({ ...user, verified_status: 'PENDING', rejection_reason: null })
+                      toast.success('Re-verification requested! Please re-upload your documents.')
+                      router.push('/profile')
+                    } catch {
+                      toast.error('Failed to request re-verification')
+                    }
+                  }}
+                  className="bg-coral hover:bg-coral-dark text-white font-semibold rounded-xl"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" /> Request Re-verification
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Links */}
         <div className="bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm mb-6">

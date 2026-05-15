@@ -3,6 +3,10 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, ChevronDown, ChevronUp, User, GraduationCap, Mail, Phone, Calendar, Shield, Camera, ImageIcon, Loader2 } from 'lucide-react'
 
@@ -19,6 +23,8 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
   )
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [rejectDialog, setRejectDialog] = useState<{ userId: string; userName: string } | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
   const supabase = createClient()
 
   const fetchSignedUrl = async (path: string | null): Promise<string | null> => {
@@ -60,13 +66,13 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
     }
   }
 
-  const handleAction = async (userId: string, action: 'VERIFIED' | 'REJECTED') => {
+  const handleAction = async (userId: string, action: 'VERIFIED' | 'REJECTED', reason?: string) => {
     setActionLoadingId(userId)
     try {
       const res = await fetch('/api/admin/verify-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action })
+        body: JSON.stringify({ userId, action, reason })
       })
       const data = await res.json()
       if (!res.ok || data.error) {
@@ -80,6 +86,8 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
       toast.error('Network error occurred')
     } finally {
       setActionLoadingId(null)
+      setRejectDialog(null)
+      setRejectReason('')
     }
   }
 
@@ -273,7 +281,7 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
                     variant="destructive"
                     className="flex-1 h-12 font-semibold rounded-2xl shadow-md shadow-danger/20 transition-all hover:shadow-lg active:scale-[0.98]"
                     disabled={isActionLoading}
-                    onClick={() => handleAction(profile.id, 'REJECTED')}
+                    onClick={() => { setRejectDialog({ userId: profile.id, userName: profile.name }); setRejectReason('') }}
                   >
                     <XCircle className="w-5 h-5 mr-2" /> Reject
                   </Button>
@@ -283,6 +291,50 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
           </div>
         )
       })}
+
+      <Dialog open={!!rejectDialog} onOpenChange={(open) => { if (!open) setRejectDialog(null) }}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-danger" />
+              Reject Verification
+            </DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejection. This will be shown to <strong>{rejectDialog?.userName}</strong> so they can fix the issue and re-submit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              placeholder="e.g. ID card is blurry, please upload a clearer photo. Or: Student ID appears to be expired."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="min-h-[100px] rounded-2xl resize-none"
+            />
+            <div className="flex flex-wrap gap-2">
+              {['ID card is blurry or unreadable', 'Wrong document uploaded', 'Name on ID does not match', 'Selfie does not match ID card'].map(quick => (
+                <button
+                  key={quick}
+                  type="button"
+                  onClick={() => setRejectReason(quick)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-border-light hover:border-coral/40 hover:bg-coral/[0.04] text-text-muted hover:text-coral transition-colors"
+                >
+                  {quick}
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialog(null)} className="rounded-xl">Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectDialog && handleAction(rejectDialog.userId, 'REJECTED', rejectReason.trim() || undefined)}
+              className="rounded-xl shadow-md shadow-danger/20"
+            >
+              <XCircle className="w-4 h-4 mr-2" /> Reject with Reason
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

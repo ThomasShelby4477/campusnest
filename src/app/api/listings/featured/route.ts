@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // [SECURITY H-4] Use the anon key client so RLS policies enforce
-// is_active = TRUE AND is_verified = TRUE naturally.
+// is_active = TRUE naturally.
 // Previously used supabaseAdmin (service role) which bypasses all RLS —
 // a single query bug could have exposed all listings including drafts.
 const supabasePublic = createClient(
@@ -28,7 +28,6 @@ export async function GET() {
       listing_images ( url, is_primary, "order" )
     `)
     .eq('is_active', true)
-    .eq('is_verified', true)
     .order('distance_from_college', { ascending: true, nullsFirst: false })
     .limit(8)
 
@@ -41,7 +40,7 @@ export async function GET() {
   const listings = (data || []).map((l: any) => ({
     ...l,
     images: [...(l.listing_images || [])].sort((a: any, b: any) => a.order - b.order),
-    verified_status: l.is_verified ? 'VERIFIED' : 'PENDING',
+    verified_status: 'VERIFIED',
   }))
 
   return NextResponse.json({ listings })

@@ -50,7 +50,6 @@ function SearchContent() {
       .from('listings')
       .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey ( name, avatar_url )`)
       .eq('is_active', true)
-      .eq('is_verified', true)
 
     if (minRent) query = query.gte('rent', parseInt(minRent))
     if (maxRent) query = query.lte('rent', parseInt(maxRent))

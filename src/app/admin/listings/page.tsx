@@ -11,6 +11,7 @@ export default async function ListingsAdminPage() {
       listing_images(url, is_primary),
       profiles!listings_poster_id_fkey(name, email, verified_status, avatar_url)
     `)
+    .eq('is_active', true)
     .order('created_at', { ascending: false })
 
   return (

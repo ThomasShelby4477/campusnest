@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabase/admin'
 import { rateLimit } from '@/lib/rate-limit'
 import { csrfGuard } from '@/lib/csrf'
 
@@ -79,16 +78,14 @@ export async function POST(request: NextRequest) {
 
     const { images, available_from, ...listingData } = result.data
 
-    const autoApprove = process.env.AUTO_APPROVE_LISTINGS === 'true'
-
-    // Insert listing
+    // Insert listing (auto-verified since only verified users can post)
     const { data: listing, error: listingError } = await supabase
       .from('listings')
       .insert({
         ...listingData,
         available_from: available_from || null,
         poster_id: user.id,
-        is_verified: autoApprove,
+        is_verified: true,
         is_active: true,
       })
       .select('id')
@@ -120,33 +117,10 @@ export async function POST(request: NextRequest) {
       // In production, we might want to rollback, but let's proceed and warn.
     }
 
-    if (!autoApprove) {
-      // Notify admins
-      // Since there's no single admin, we insert a notification for all admins or a generic one.
-      // Alternatively, we just log it. The prompt says "admin notified via notifications row".
-      // We will fetch an admin ID or just insert a global notification if supported, 
-      // but 'notifications' table requires user_id. Let's find admins.
-      const { data: admins } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('role', 'ADMIN')
-
-      if (admins && admins.length > 0) {
-        const adminNotifications = admins.map((admin) => ({
-          user_id: admin.id,
-          type: 'LISTING_APPROVED' as const,
-          title: 'New Listing Pending Review',
-          body: `Listing "${listingData.title}" needs review.`,
-          link: '/admin/listings',
-        }))
-        await supabaseAdmin.from('notifications').insert(adminNotifications)
-      }
-    }
-
     return NextResponse.json({
       message: 'Listing created successfully',
       id: listing.id,
-      is_verified: autoApprove,
+      is_verified: true,
     })
   } catch (err) {
     console.error('POST /api/listings error:', err)
@@ -171,7 +145,6 @@ export async function GET(request: NextRequest) {
         profiles!listings_poster_id_fkey ( name, avatar_url )
       `)
       .eq('is_active', true)
-      .eq('is_verified', true)
 
     const minRent = url.searchParams.get('minRent')
     const maxRent = url.searchParams.get('maxRent')

@@ -26,7 +26,11 @@ export type NotificationType =
   | 'VERIFICATION_REJECTED'
   | 'LISTING_APPROVED'
   | 'REPORT_RESOLVED'
-  | 'LISTING_REMOVED';
+  | 'LISTING_REMOVED'
+  | 'LISTING_RESTORED'
+  | 'INTEREST_REQUEST'
+  | 'INTEREST_ACCEPTED'
+  | 'INTEREST_DECLINED';
 
 /* ── Row types ─────────────────────────────────────────────── */
 
@@ -94,6 +98,9 @@ export interface Listing {
   is_active: boolean;
   is_verified: boolean;
   views: number;
+  removal_reason: string | null;
+  removed_at: string | null;
+  removed_by: string | null;
   created_at: string;
   updated_at: string;
 }

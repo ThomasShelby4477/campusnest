@@ -23,7 +23,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     .eq('id', id)
     .single()
 
-  if (!listing || (!listing.is_active && !listing.is_verified)) {
+  if (!listing || !listing.is_active) {
     notFound()
   }
 

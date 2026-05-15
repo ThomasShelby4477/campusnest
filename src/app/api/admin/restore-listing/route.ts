@@ -20,12 +20,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { listingId, reason } = await req.json()
+    const { listingId } = await req.json()
     if (!listingId) {
       return NextResponse.json({ error: 'Missing listingId' }, { status: 400 })
     }
 
-    // Fetch listing info for notification
     const { data: listing } = await supabaseAdmin
       .from('listings')
       .select('title, poster_id, profiles(name)')
@@ -36,44 +35,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
     }
 
-    const posterId = (listing as any).poster_id
-    const listingTitle = listing.title
-    const reasonText = reason?.trim() || 'This listing has been removed by an administrator.'
-    const posterName = (listing as any).profiles?.name || 'User'
-
-    // Soft-delete the listing with removal metadata
     const { error: updateError } = await supabaseAdmin
       .from('listings')
       .update({
-        is_active: false,
-        removal_reason: reasonText,
-        removed_at: new Date().toISOString(),
-        removed_by: user.id,
+        is_active: true,
+        removal_reason: null,
+        removed_at: null,
+        removed_by: null,
       })
       .eq('id', listingId)
 
     if (updateError) throw updateError
 
-    // Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      actor_id: user.id,
-      action: 'REMOVE_LISTING',
-      target_type: 'listing',
-      target_id: listingId,
-      metadata: { poster_id: posterId, poster_name: posterName, listing_title: listingTitle, reason: reasonText },
-    })
+    const posterId = (listing as any).poster_id
+    const listingTitle = listing.title
+    const posterName = (listing as any).profiles?.name || 'User'
 
-    // Notify the poster
     if (posterId) {
       await supabaseAdmin.from('notifications').insert({
         user_id: posterId,
-        type: 'LISTING_REMOVED',
-        title: 'Listing Removed',
-        body: `Your listing "${listingTitle}" was removed. Reason: ${reasonText}`,
+        type: 'LISTING_RESTORED',
+        title: 'Listing Restored',
+        body: `Your listing "${listingTitle}" has been restored and is now visible to other users.`,
         link: '/my-listings',
       })
 
-      // Attempt push notification
       try {
         const { data: profileWithToken } = await supabaseAdmin
           .from('profiles')
@@ -90,8 +76,8 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
               fcm_token: profileWithToken.fcm_token,
-              title: 'Listing Removed',
-              body: `Your listing "${listingTitle}" was removed by admin.`,
+              title: 'Listing Restored',
+              body: `Your listing "${listingTitle}" has been restored by admin.`,
               data: { link: '/my-listings' },
             }),
           })
@@ -101,9 +87,18 @@ export async function POST(req: Request) {
       }
     }
 
+    // Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      actor_id: user.id,
+      action: 'RESTORE_LISTING',
+      target_type: 'listing',
+      target_id: listingId,
+      metadata: { poster_id: posterId, poster_name: posterName, listing_title: listingTitle },
+    })
+
     return NextResponse.json({ success: true })
   } catch (err: any) {
-    console.error('Admin remove-listing error:', err)
+    console.error('Admin restore-listing error:', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

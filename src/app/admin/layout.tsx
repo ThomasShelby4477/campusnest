@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { LayoutDashboard, UserCheck, Home, AlertTriangle, Users } from 'lucide-react'
+import { LayoutDashboard, UserCheck, Home, AlertTriangle, Users, Trash2 } from 'lucide-react'
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
@@ -19,6 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     { label: 'Listings', href: '/admin/listings', icon: Home },
     { label: 'Reports', href: '/admin/reports', icon: AlertTriangle },
     { label: 'Users', href: '/admin/users', icon: Users },
+    { label: 'Removed', href: '/admin/removed-listings', icon: Trash2 },
   ]
 
   return (

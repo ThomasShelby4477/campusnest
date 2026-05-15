@@ -25,13 +25,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing listingId' }, { status: 400 })
     }
 
-    const { data: listing } = await supabaseAdmin
+    const { data: listing, error: fetchError } = await supabaseAdmin
       .from('listings')
-      .select('title, poster_id, profiles(name)')
+      .select('title, poster_id, profiles!listings_poster_id_fkey(name)')
       .eq('id', listingId)
       .single()
 
-    if (!listing) {
+    if (fetchError || !listing) {
+      console.error('restore-listing fetch error:', fetchError)
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
     }
 

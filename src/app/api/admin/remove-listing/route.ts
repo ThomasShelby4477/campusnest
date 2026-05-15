@@ -26,13 +26,14 @@ export async function POST(req: Request) {
     }
 
     // Fetch listing info for notification
-    const { data: listing } = await supabaseAdmin
+    const { data: listing, error: fetchError } = await supabaseAdmin
       .from('listings')
-      .select('title, poster_id, profiles(name)')
+      .select('title, poster_id, profiles!listings_poster_id_fkey(name)')
       .eq('id', listingId)
       .single()
 
-    if (!listing) {
+    if (fetchError || !listing) {
+      console.error('remove-listing fetch error:', fetchError)
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
     }
 

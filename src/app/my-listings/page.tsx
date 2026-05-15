@@ -84,9 +84,12 @@ export default function MyListingsPage() {
   return (
     <div className="min-h-screen bg-muted-bg pb-16">
 
-      {/* Sticky header */}
-      <div className="sticky top-16 z-30 bg-muted-bg/95 backdrop-blur-sm">
-        <div className="bg-gradient-to-b from-navy/5 via-navy/[0.02] to-transparent pt-10 pb-6 px-4 sm:px-6">
+      {/* Decorative gradient band */}
+      <div className="bg-gradient-to-b from-navy/5 via-navy/[0.02] to-transparent pt-6 pb-2 px-4 sm:px-6" />
+
+      {/* Sticky header — matches saved listings pattern */}
+      <div className="sticky top-16 z-30 -mt-6">
+        <div className="bg-muted-bg/95 backdrop-blur-sm border-b border-transparent transition-all duration-300 py-4 px-4 sm:px-6">
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
               <div className="flex items-center gap-3">

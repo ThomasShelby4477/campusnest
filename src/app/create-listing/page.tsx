@@ -172,26 +172,74 @@ export default function CreateListingPage() {
     )
   }
 
+  const stepMeta = [
+    { label: 'Basic Info', icon: 'Home', desc: 'Tell us about the property' },
+    { label: 'Amenities', icon: 'Wifi', desc: 'What\'s included?' },
+    { label: 'Location', icon: 'MapPin', desc: 'Pin it on the map' },
+    { label: 'Photos', icon: 'Image', desc: 'Show it off' },
+  ]
+
   return (
-    <div className="min-h-screen bg-muted-bg py-8 px-4 sm:px-6">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-navy mb-6">List a Property</h1>
-        
-        {/* Progress bar */}
-        <div className="mb-8">
-          <div className="flex justify-between text-sm font-medium text-text-muted mb-2">
-            <span>Step {step} of {totalSteps}</span>
-            <span>{['Basic Info', 'Amenities', 'Location', 'Images'][step - 1]}</span>
-          </div>
-          <div className="h-2 bg-border-light rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-coral transition-all duration-300 ease-out"
-              style={{ width: `${(step / totalSteps) * 100}%` }}
-            />
+    <div className="min-h-screen bg-muted-bg pb-16">
+      {/* Warm gradient band at top */}
+      <div className="bg-gradient-to-b from-navy/5 via-navy/[0.02] to-transparent pt-10 pb-6 px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-coral/10 flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-coral"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 20V11l7-5 7 5v9"/><path d="M10 20v-6h4v6"/></svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-navy">List a Property</h1>
+              <p className="text-sm text-text-muted">Share your space with the NFSU community</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className={`transition-all duration-200 ease-out ${
+      {/* Stepper */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6">
+        <div className="flex items-center justify-between mb-8">
+          {stepMeta.map((s, i) => {
+            const stepNum = i + 1
+            const isDone = stepNum < step
+            const isCurrent = stepNum === step
+            const isFuture = stepNum > step
+
+            return (
+              <div key={s.label} className="flex items-center flex-1 last:flex-none">
+                <div className="flex flex-col items-center relative">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                    isDone
+                      ? 'bg-coral text-white shadow-md shadow-coral/25'
+                      : isCurrent
+                      ? 'bg-white border-2 border-coral text-coral shadow-md shadow-coral/20 ring-4 ring-coral/10'
+                      : 'bg-white border-2 border-border-light text-text-muted'
+                  }`}>
+                    {isDone ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                    ) : (
+                      stepNum
+                    )}
+                  </div>
+                  <span className={`text-[11px] font-semibold mt-2 whitespace-nowrap transition-colors ${
+                    isCurrent ? 'text-coral' : isDone ? 'text-navy' : 'text-text-muted'
+                  }`}>
+                    {s.label}
+                  </span>
+                </div>
+
+                {i < stepMeta.length - 1 && (
+                  <div className="flex-1 h-[2px] mx-2 mt-[-18px] rounded-full transition-colors duration-300"
+                    style={{ backgroundColor: isDone ? '#E8593C' : '#E2E8F0' }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Step content */}
+        <div className={`transition-all duration-300 ease-out ${
           isTransitioning ? 'opacity-0 translate-x-5' : 'opacity-100 translate-x-0'
         }`}>
           {steps[step - 1]}

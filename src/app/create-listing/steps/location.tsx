@@ -1,8 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useListingStore } from '@/stores/listing-store'
@@ -67,16 +65,24 @@ export function LocationStep({ onNext, onBack }: Props) {
   const isValid = store.latitude !== null && store.longitude !== null && store.address.length >= 5
 
   return (
-    <Card className="border-border-light shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl">Location</CardTitle>
-        <CardDescription>Pin your property on the map</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        
-        <div className="h-[300px] rounded-xl overflow-hidden border border-border-light relative">
+    <div className="bg-white rounded-3xl border border-border-light shadow-lg shadow-navy/[0.03] p-6 sm:p-8 space-y-8">
+
+      {/* Section: Map */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <MapPin className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-navy">Pin Your Property</h2>
+            <p className="text-xs text-text-muted">Click anywhere on the map to set the location</p>
+          </div>
+        </div>
+
+        {/* Map with soft frame */}
+        <div className="relative rounded-2xl overflow-hidden shadow-inner border-2 border-border-light">
           {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-            <div className="w-full h-full flex items-center justify-center bg-muted-bg text-text-muted text-sm text-center p-4">
+            <div className="w-full h-[340px] flex items-center justify-center bg-muted-bg text-text-muted text-sm text-center p-4">
               Google Maps API Key missing in environment variables.
             </div>
           ) : (
@@ -102,38 +108,71 @@ export function LocationStep({ onNext, onBack }: Props) {
               </Map>
             </APIProvider>
           )}
+
+          {/* Distance overlay badge */}
+          {distanceInfo && (
+            <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-white/60 text-sm font-semibold text-navy z-10">
+              <MapPin className="w-4 h-4 text-coral" />
+              {distanceInfo}
+            </div>
+          )}
         </div>
 
-        {distanceInfo && (
-          <div className="flex items-center gap-2 text-sm text-navy bg-navy/5 p-3 rounded-lg font-medium">
-            <MapPin className="w-4 h-4 text-navy" />
-            {distanceInfo}
+        {/* Map legend */}
+        {store.latitude == null && (
+          <div className="flex items-center gap-4 justify-center text-xs text-text-muted">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-coral" /> Your property
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-navy" /> NFSU Campus
+            </div>
           </div>
         )}
+      </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="address">Full Address</Label>
+      {/* Section: Address */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <MapPin className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <h2 className="text-lg font-bold text-navy">Full Address</h2>
+        </div>
+        <div className="relative">
+          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted shrink-0" />
           <Input 
             id="address"
-            placeholder={geocoding ? 'Loading address...' : 'Enter precise location address'}
+            placeholder={geocoding ? 'Loading address...' : 'Enter the full address of the property'}
             value={store.address}
             onChange={(e) => store.updateField('address', e.target.value)}
+            className="h-12 pl-10 rounded-2xl border-border-light focus-visible:ring-coral/20"
           />
         </div>
+        {geocoding && (
+          <p className="text-xs text-text-muted flex items-center gap-1.5">
+            <span className="w-3 h-3 border-2 border-coral/30 border-t-coral rounded-full animate-spin" />
+            Looking up address...
+          </p>
+        )}
+      </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={onBack} className="flex-1">
-            Back
-          </Button>
-          <Button 
-            onClick={onNext} 
-            disabled={!isValid}
-            className="flex-1 bg-coral hover:bg-coral-dark text-white"
-          >
-            Next Step
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm font-semibold text-text-muted hover:text-navy transition-colors px-2"
+        >
+          ← Back
+        </button>
+        <Button 
+          onClick={onNext} 
+          disabled={!isValid}
+          className="flex-1 h-12 bg-coral hover:bg-coral-dark text-white font-semibold text-base rounded-2xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]"
+        >
+          Continue to Photos →
+        </Button>
+      </div>
+    </div>
   )
 }

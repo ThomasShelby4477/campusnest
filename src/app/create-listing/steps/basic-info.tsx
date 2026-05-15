@@ -1,15 +1,35 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useListingStore } from '@/stores/listing-store'
+import { useListingStore, type RoomType, type Furnished, type GenderAllowed } from '@/stores/listing-store'
+import { BedSingle, Sofa, Users, Calendar, Banknote, PencilLine } from 'lucide-react'
 
 interface Props {
   onNext: () => void
 }
+
+const ROOM_TYPES: { value: RoomType; label: string; desc: string }[] = [
+  { value: 'SINGLE', label: 'Single Room', desc: 'Private room for 1' },
+  { value: 'SHARED', label: 'Shared Room', desc: 'Shared with others' },
+  { value: '1BHK', label: '1 BHK', desc: 'Bedroom + hall + kitchen' },
+  { value: '2BHK', label: '2 BHK', desc: 'Two bedrooms' },
+  { value: '3BHK', label: '3 BHK', desc: 'Three bedrooms' },
+  { value: 'PG', label: 'PG / Hostel', desc: 'Paying guest' },
+]
+
+const FURNISH_OPTIONS: { value: Furnished; label: string; desc: string }[] = [
+  { value: 'FURNISHED', label: 'Fully Furnished', desc: 'All furniture included' },
+  { value: 'SEMI', label: 'Semi Furnished', desc: 'Partial furniture' },
+  { value: 'UNFURNISHED', label: 'Unfurnished', desc: 'No furniture' },
+]
+
+const GENDER_OPTIONS: { value: GenderAllowed; label: string; desc: string }[] = [
+  { value: 'MALE', label: 'Boys Only', desc: 'Male tenants' },
+  { value: 'FEMALE', label: 'Girls Only', desc: 'Female tenants' },
+  { value: 'ANY', label: 'Anyone', desc: 'All genders welcome' },
+]
 
 export function BasicInfoStep({ onNext }: Props) {
   const store = useListingStore()
@@ -20,123 +40,199 @@ export function BasicInfoStep({ onNext }: Props) {
     store.deposit !== '' && Number(store.deposit) >= 0
 
   return (
-    <Card className="border-border-light shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl">Basic Information</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="title">Property Title</Label>
-          <Input 
-            id="title" 
-            placeholder="e.g. Spacious Private Room near NFSU Gate 1" 
-            value={store.title}
-            onChange={(e) => store.updateField('title', e.target.value)}
-            maxLength={200}
-          />
-        </div>
+    <div className="bg-white rounded-3xl border border-border-light shadow-lg shadow-navy/[0.03] p-6 sm:p-8 space-y-8">
 
+      {/* Section: Property Title */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <PencilLine className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <h2 className="text-lg font-bold text-navy">Property Title</h2>
+        </div>
+        <Input 
+          id="title" 
+          placeholder="e.g. Spacious Private Room near NFSU Gate 1" 
+          value={store.title}
+          onChange={(e) => store.updateField('title', e.target.value)}
+          maxLength={200}
+          className="h-12 text-base rounded-2xl border-border-light focus-visible:ring-coral/20"
+        />
+        <p className="text-xs text-text-muted">Be descriptive — mention nearby landmarks. {store.title.length}/200</p>
+      </div>
+
+      {/* Section: Pricing */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <Banknote className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <h2 className="text-lg font-bold text-navy">Pricing</h2>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="rent">Monthly Rent (₹)</Label>
-            <Input 
-              id="rent" 
-              type="number"
-              placeholder="5000" 
-              value={store.rent}
-              onChange={(e) => store.updateField('rent', e.target.value ? Number(e.target.value) : '')}
-            />
+            <Label htmlFor="rent" className="text-xs font-semibold text-text-muted uppercase tracking-wide">Monthly Rent</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">₹</span>
+              <Input 
+                id="rent" 
+                type="number"
+                placeholder="5000" 
+                value={store.rent}
+                onChange={(e) => store.updateField('rent', e.target.value ? Number(e.target.value) : '')}
+                className="h-12 pl-8 rounded-2xl border-border-light focus-visible:ring-coral/20"
+              />
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="deposit">Security Deposit (₹)</Label>
-            <Input 
-              id="deposit" 
-              type="number"
-              placeholder="10000" 
-              value={store.deposit}
-              onChange={(e) => store.updateField('deposit', e.target.value ? Number(e.target.value) : '')}
-            />
+            <Label htmlFor="deposit" className="text-xs font-semibold text-text-muted uppercase tracking-wide">Security Deposit</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">₹</span>
+              <Input 
+                id="deposit" 
+                type="number"
+                placeholder="10000" 
+                value={store.deposit}
+                onChange={(e) => store.updateField('deposit', e.target.value ? Number(e.target.value) : '')}
+                className="h-12 pl-8 rounded-2xl border-border-light focus-visible:ring-coral/20"
+              />
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Room Type</Label>
-            <Select 
-              value={store.room_type} 
-              onValueChange={(v) => store.updateField('room_type', v as any)}
+      {/* Section: Room Type */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <BedSingle className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <h2 className="text-lg font-bold text-navy">Room Type</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {ROOM_TYPES.map((rt) => (
+            <button
+              key={rt.value}
+              type="button"
+              onClick={() => store.updateField('room_type', rt.value)}
+              className={`text-left p-3.5 rounded-2xl border-2 transition-all duration-200 ${
+                store.room_type === rt.value
+                  ? 'border-coral bg-coral/[0.06] shadow-sm'
+                  : 'border-border-light hover:border-navy/20 hover:bg-muted-bg'
+              }`}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SINGLE">Single Room</SelectItem>
-                <SelectItem value="SHARED">Shared Room</SelectItem>
-                <SelectItem value="1BHK">1 BHK</SelectItem>
-                <SelectItem value="2BHK">2 BHK</SelectItem>
-                <SelectItem value="3BHK">3 BHK</SelectItem>
-                <SelectItem value="PG">PG/Hostel</SelectItem>
-              </SelectContent>
-            </Select>
+              <p className={`text-sm font-bold ${store.room_type === rt.value ? 'text-coral' : 'text-navy'}`}>{rt.label}</p>
+              <p className="text-xs text-text-muted mt-0.5">{rt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Section: Furnishing */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <Sofa className="w-3.5 h-3.5 text-coral" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Furnishing</Label>
-            <Select 
-              value={store.furnished} 
-              onValueChange={(v) => store.updateField('furnished', v as any)}
+          <h2 className="text-lg font-bold text-navy">Furnishing</h2>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          {FURNISH_OPTIONS.map((fo) => (
+            <button
+              key={fo.value}
+              type="button"
+              onClick={() => store.updateField('furnished', fo.value)}
+              className={`text-left p-3.5 rounded-2xl border-2 transition-all duration-200 ${
+                store.furnished === fo.value
+                  ? 'border-coral bg-coral/[0.06] shadow-sm'
+                  : 'border-border-light hover:border-navy/20 hover:bg-muted-bg'
+              }`}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="FURNISHED">Fully Furnished</SelectItem>
-                <SelectItem value="SEMI">Semi Furnished</SelectItem>
-                <SelectItem value="UNFURNISHED">Unfurnished</SelectItem>
-              </SelectContent>
-            </Select>
+              <p className={`text-sm font-bold ${store.furnished === fo.value ? 'text-coral' : 'text-navy'}`}>{fo.label}</p>
+              <p className="text-xs text-text-muted mt-0.5">{fo.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Section: Preferences */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <Users className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <h2 className="text-lg font-bold text-navy">Tenant Preferences</h2>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Gender Allowed</Label>
+          <div className="grid grid-cols-3 gap-2.5">
+            {GENDER_OPTIONS.map((go) => (
+              <button
+                key={go.value}
+                type="button"
+                onClick={() => store.updateField('gender_allowed', go.value)}
+                className={`text-left p-3.5 rounded-2xl border-2 transition-all duration-200 ${
+                  store.gender_allowed === go.value
+                    ? 'border-coral bg-coral/[0.06] shadow-sm'
+                    : 'border-border-light hover:border-navy/20 hover:bg-muted-bg'
+                }`}
+              >
+                <p className={`text-sm font-bold ${store.gender_allowed === go.value ? 'text-coral' : 'text-navy'}`}>{go.label}</p>
+                <p className="text-xs text-text-muted mt-0.5">{go.desc}</p>
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Gender Allowed</Label>
-            <Select 
-              value={store.gender_allowed} 
-              onValueChange={(v) => store.updateField('gender_allowed', v as any)}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MALE">Boys Only</SelectItem>
-                <SelectItem value="FEMALE">Girls Only</SelectItem>
-                <SelectItem value="ANY">Anyone</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex items-center justify-between p-3.5 rounded-2xl border border-border-light bg-muted-bg/50">
+          <div>
+            <p className="text-sm font-bold text-navy">Roommates Needed</p>
+            <p className="text-xs text-text-muted">How many people can share this space?</p>
           </div>
-          <div className="space-y-1.5">
-            <Label>Roommates Needed</Label>
-            <Input 
-              type="number" 
-              min={1} 
-              value={store.roommates_needed}
-              onChange={(e) => store.updateField('roommates_needed', Number(e.target.value))}
-            />
+          <div className="flex items-center gap-1.5 bg-white border border-border-light rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => store.updateField('roommates_needed', Math.max(1, store.roommates_needed - 1))}
+              className="w-9 h-9 flex items-center justify-center text-navy font-bold hover:bg-muted-bg transition-colors"
+            >−</button>
+            <span className="w-9 text-center font-bold text-navy text-sm">{store.roommates_needed}</span>
+            <button
+              type="button"
+              onClick={() => store.updateField('roommates_needed', store.roommates_needed + 1)}
+              className="w-9 h-9 flex items-center justify-center text-navy font-bold hover:bg-muted-bg transition-colors"
+            >+</button>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="date">Available From (Optional)</Label>
-          <Input 
-            id="date" 
-            type="date"
-            value={store.available_from}
-            onChange={(e) => store.updateField('available_from', e.target.value)}
-          />
+      {/* Section: Availability */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center">
+            <Calendar className="w-3.5 h-3.5 text-coral" />
+          </div>
+          <h2 className="text-lg font-bold text-navy">Available From</h2>
+          <span className="text-xs text-text-muted ml-auto">Optional</span>
         </div>
+        <Input 
+          id="date" 
+          type="date"
+          value={store.available_from}
+          onChange={(e) => store.updateField('available_from', e.target.value)}
+          className="h-12 rounded-2xl border-border-light focus-visible:ring-coral/20"
+        />
+      </div>
 
+      <div className="pt-2">
         <Button 
           onClick={onNext} 
           disabled={!isValid}
-          className="w-full bg-coral hover:bg-coral-dark text-white mt-4"
+          className="w-full h-12 bg-coral hover:bg-coral-dark text-white font-semibold text-base rounded-2xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]"
         >
-          Next Step
+          Continue to Amenities →
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

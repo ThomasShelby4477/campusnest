@@ -25,7 +25,8 @@ export type NotificationType =
   | 'VERIFICATION_APPROVED'
   | 'VERIFICATION_REJECTED'
   | 'LISTING_APPROVED'
-  | 'REPORT_RESOLVED';
+  | 'REPORT_RESOLVED'
+  | 'LISTING_REMOVED';
 
 /* ── Row types ─────────────────────────────────────────────── */
 

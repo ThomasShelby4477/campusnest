@@ -84,24 +84,26 @@ export default function MyListingsPage() {
   return (
     <div className="min-h-screen bg-muted-bg pb-16">
 
-      {/* Warm gradient band at top */}
-      <div className="bg-gradient-to-b from-navy/5 via-navy/[0.02] to-transparent pt-10 pb-6 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-coral/10 flex items-center justify-center">
-                <Building className="w-5 h-5 text-coral" />
+      {/* Sticky header */}
+      <div className="sticky top-16 z-30 bg-muted-bg/95 backdrop-blur-sm">
+        <div className="bg-gradient-to-b from-navy/5 via-navy/[0.02] to-transparent pt-10 pb-6 px-4 sm:px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-coral/10 flex items-center justify-center">
+                  <Building className="w-5 h-5 text-coral" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-navy">My Listings</h1>
+                  <p className="text-sm text-text-muted">Manage your properties</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-navy">My Listings</h1>
-                <p className="text-sm text-text-muted">Manage your properties</p>
-              </div>
+              <Link href="/create-listing">
+                <Button className="bg-coral hover:bg-coral-dark text-white font-semibold rounded-2xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]">
+                  + Post New Listing
+                </Button>
+              </Link>
             </div>
-            <Link href="/create-listing">
-              <Button className="bg-coral hover:bg-coral-dark text-white font-semibold rounded-2xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]">
-                + Post New Listing
-              </Button>
-            </Link>
           </div>
         </div>
       </div>

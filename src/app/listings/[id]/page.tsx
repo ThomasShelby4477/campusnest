@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import {
   MapPin, Home, Users, CheckCircle, Wifi, Thermometer, Utensils,
-  Droplets, ShieldCheck, UserCircle2, Wind, UserCheck, Building2,
+  Droplets, ShieldCheck, UserCircle2, Wind, UserCheck, Building2, Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ListingContactButton } from './contact-button'
@@ -66,12 +66,50 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  // Check auth for contact button visibility
+  // Check auth for contact button visibility + gender guard
   const { data: { user } } = await supabase.auth.getUser()
   let isVerifiedUser = false
+  let userGender: string | null = null
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('verified_status').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('profiles').select('verified_status, gender').eq('id', user.id).single()
     isVerifiedUser = profile?.verified_status === 'VERIFIED'
+    userGender = profile?.gender ?? null
+  }
+
+  // ── Hard gender access check ──────────────────────────────
+  // Authenticated users can only view listings that match their gender or are ANY.
+  // Unauthenticated visitors are not restricted (they can't contact anyway).
+  const genderAllowed = listing.gender_allowed // 'MALE' | 'FEMALE' | 'ANY'
+  const genderBlocked =
+    user !== null &&
+    userGender !== null &&
+    genderAllowed !== 'ANY' &&
+    genderAllowed !== userGender
+
+  if (genderBlocked) {
+    const genderLabel = genderAllowed === 'MALE' ? 'boys only' : 'girls only'
+    const userLabel = userGender === 'MALE' ? 'male' : 'female'
+    return (
+      <div className="min-h-screen bg-muted-bg flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center bg-white rounded-3xl border border-border-light shadow-lg p-10">
+          <div className="w-16 h-16 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-5">
+            <Shield className="w-8 h-8 text-danger" />
+          </div>
+          <h1 className="text-2xl font-black text-navy mb-2">Access Restricted</h1>
+          <p className="text-text-muted leading-relaxed mb-6">
+            This listing is marked as <strong className="text-navy">{genderLabel}</strong>.
+            As a <strong className="text-navy">{userLabel}</strong> user, you can only view listings
+            that match your gender or are open to all.
+          </p>
+          <a
+            href="/search"
+            className="inline-flex items-center justify-center gap-2 h-12 px-8 bg-navy text-white rounded-xl font-bold text-sm hover:bg-navy/90 transition-colors"
+          >
+            Browse Matching Listings
+          </a>
+        </div>
+      </div>
+    )
   }
 
   // Increment views

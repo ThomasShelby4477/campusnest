@@ -14,7 +14,7 @@ const updateSchema = z.object({
     .string()
     .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number')
     .optional(),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+  gender: z.enum(['MALE', 'FEMALE']).optional(),
   looking_for_buddy: z.boolean().optional(),
   avatar_url: z.string().url().optional(),
 })

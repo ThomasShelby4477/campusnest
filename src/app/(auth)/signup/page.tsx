@@ -12,11 +12,12 @@ import { ProfileStep } from './steps/profile-step'
 import { IdUploadStep } from './steps/id-upload-step'
 import { PendingStep } from './steps/pending-step'
 import Link from 'next/link'
+import React from 'react'
 
 export default function SignupPage() {
   const router = useRouter()
   const { step, setStep, email, setEmail } = useSignupStore()
-  const { setUser } = useAuthStore()
+  const { setUser, updateUser } = useAuthStore()
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   const goToStep = useCallback(
@@ -30,6 +31,7 @@ export default function SignupPage() {
     [setStep]
   )
 
+  // ── Step 1: Email ─────────────────────────────────────────
   const handleEmailSubmit = async (emailValue: string) => {
     setEmail(emailValue)
     const res = await fetch('/api/auth/send-otp', {
@@ -40,11 +42,9 @@ export default function SignupPage() {
     const data = await res.json()
 
     if (res.status === 409 && data.error === 'user_exists') {
-      // User already registered — prompt them to log in
       goToStep('already-exists')
       return
     }
-
     if (!res.ok) {
       toast.error(data.error || 'Failed to send OTP')
       return
@@ -53,62 +53,113 @@ export default function SignupPage() {
     goToStep('otp')
   }
 
+  // ── Step 2: OTP ───────────────────────────────────────────
+  // IMPORTANT: Use the server-side verify-otp API route (not the client SDK)
+  // so that session cookies are properly set server-side via @supabase/ssr.
+  // Calling supabase.auth.verifyOtp() directly from the client does NOT set
+  // the HttpOnly cookies, breaking all subsequent server-side auth checks.
   const handleOtpVerify = async (token: string) => {
-    const supabase = createClient()
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, token, redirect: '/signup' }),
     })
-    if (error) {
-      toast.error(error.message || 'Invalid OTP')
+
+    const data = await res.json()
+
+    if (res.status === 403 && data.suspended) {
+      toast.error('Your account has been suspended. Contact email@campusnest.com', { duration: 5000 })
+      setTimeout(() => { window.location.href = '/suspended' }, 800)
       return
     }
-    toast.success('Email verified!')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!res.ok) {
+      toast.error(data.error || 'Invalid OTP. Please try again.')
+      throw new Error(data.error)
+    }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // Sync session to browser Supabase client → triggers onAuthStateChange → navbar updates
+    if (data.access_token && data.refresh_token) {
+      const supabase = createClient()
+      await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
+    }
 
+    // Fetch the profile to decide which step to resume at
+    const profileRes = await fetch('/api/auth/me')
+    if (!profileRes.ok) {
+      // Profile doesn't exist yet — go to role selection
+      goToStep('role')
+      return
+    }
+
+    const { profile } = await profileRes.json()
     if (profile) {
       setUser(profile)
+
       if (!profile.name) {
+        // Hasn't filled in profile yet — start from role
         goToStep('role')
-      } else if (!profile.student_id_path && profile.role === 'STUDENT' && profile.verified_status === 'PARTIAL') {
+      } else if (profile.role === 'STUDENT' && !profile.student_id_path) {
+        // Profile done but no ID uploaded
         goToStep('id-upload')
       } else if (profile.verified_status === 'PENDING') {
         goToStep('pending')
       } else if (profile.verified_status === 'REJECTED') {
-        goToStep('id-upload')
-      } else {
+        router.push('/reverify')
+      } else if (profile.verified_status === 'VERIFIED') {
         router.push('/search')
+      } else {
+        goToStep('role')
       }
     } else {
       goToStep('role')
     }
   }
 
+  // ── Step 3: Role ──────────────────────────────────────────
+  // Save the role to the database immediately when selected,
+  // then update the local store so ProfileStep knows it.
   const handleRoleSelect = async (role: 'STUDENT' | 'LANDLORD') => {
-    if (role === 'LANDLORD') {
-      goToStep('profile')
-    } else {
-      goToStep('profile')
+    // Optimistically update store so ProfileStep renders correct fields
+    updateUser({ role })
+
+    // Persist role to database via dedicated API endpoint
+    const res = await fetch('/api/auth/set-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      toast.error(data.error || 'Failed to set role. Please try again.')
+      // Revert optimistic update
+      updateUser({ role: 'STUDENT' })
+      return
     }
+
+    const data = await res.json()
+    if (data.profile) setUser(data.profile)
+
+    goToStep('profile')
   }
 
+  // ── Step 4: Profile ───────────────────────────────────────
   const handleProfileComplete = async (role?: string) => {
     if (role === 'LANDLORD') {
+      // Landlords are auto-verified — go straight to search
+      toast.success('Welcome to CampusNest!')
       router.push('/search')
     } else {
+      // Students need to upload ID
       goToStep('id-upload')
     }
   }
 
+  // ── Step 5: ID Upload ─────────────────────────────────────
   const handleIdUploaded = () => {
     goToStep('pending')
   }
@@ -146,8 +197,9 @@ export default function SignupPage() {
     ),
   }
 
-  const stepIndex = ['email', 'otp', 'role', 'profile', 'id-upload', 'pending'].indexOf(step)
-  const totalSteps = 6
+  const signupSteps = ['email', 'otp', 'role', 'profile', 'id-upload', 'pending']
+  const stepIndex = signupSteps.indexOf(step)
+  const totalSteps = signupSteps.length
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted-bg px-4 py-8">
@@ -155,27 +207,27 @@ export default function SignupPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-navy">
-              🏠 CampusNest
-            </h1>
-            <p className="text-text-muted text-sm mt-1">Student Housing & Roommate Finder</p>
+            <h1 className="text-3xl font-bold text-navy">🏠 CampusNest</h1>
+            <p className="text-text-muted text-sm mt-1">Student Housing &amp; Roommate Finder</p>
           </Link>
         </div>
 
-        {/* Progress bar */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-text-muted font-medium">
-              Step {stepIndex + 1} of {totalSteps}
-            </span>
+        {/* Progress bar (only show during main steps) */}
+        {stepIndex >= 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-text-muted font-medium">
+                Step {stepIndex + 1} of {totalSteps}
+              </span>
+            </div>
+            <div className="h-1.5 bg-border-light rounded-full overflow-hidden">
+              <div
+                className="h-full bg-coral rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+              />
+            </div>
           </div>
-          <div className="h-1.5 bg-border-light rounded-full overflow-hidden">
-            <div
-              className="h-full bg-coral rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Step content */}
         <div
@@ -187,7 +239,7 @@ export default function SignupPage() {
         </div>
 
         {/* Login link */}
-        {(step === 'email') && (
+        {step === 'email' && (
           <p className="text-center text-sm text-text-muted mt-6">
             Already have an account?{' '}
             <Link href="/login" className="text-coral font-semibold hover:underline">

@@ -1,17 +1,23 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// [SECURITY H-4] Use the anon key client so RLS policies enforce
-// is_active = TRUE naturally.
-// Previously used supabaseAdmin (service role) which bypasses all RLS —
-// a single query bug could have exposed all listings including drafts.
-const supabasePublic = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
-  const { data, error } = await supabasePublic
+  // Use server client so we have access to the authenticated user's session
+  const supabase = await createClient()
+
+  // Resolve the logged-in user's gender for filtering
+  const { data: { user } } = await supabase.auth.getUser()
+  let userGender: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('gender')
+      .eq('id', user.id)
+      .single()
+    userGender = profile?.gender ?? null
+  }
+
+  let query = supabase
     .from('listings')
     .select(`
       id,
@@ -28,6 +34,16 @@ export async function GET() {
       listing_images ( url, is_primary, "order" )
     `)
     .eq('is_active', true)
+
+  // Hard gender filter — same rule as search page:
+  // MALE users see MALE + ANY; FEMALE users see FEMALE + ANY; guests see all
+  if (userGender === 'MALE') {
+    query = query.in('gender_allowed', ['MALE', 'ANY'])
+  } else if (userGender === 'FEMALE') {
+    query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+  }
+
+  const { data, error } = await query
     .order('distance_from_college', { ascending: true, nullsFirst: false })
     .limit(8)
 

@@ -34,7 +34,12 @@ function SearchContent() {
   const [minRent, setMinRent] = useState(searchParams.get('minRent') || '')
   const [maxRent, setMaxRent] = useState(searchParams.get('maxRent') || '')
   const [roomType, setRoomType] = useState(searchParams.get('roomType') || 'ALL')
-  const [gender, setGender] = useState(searchParams.get('gender') || 'ALL')
+
+  // Gender filter: derived from the signed-in user's gender — cannot be overridden
+  // MALE users → see MALE + ANY listings; FEMALE users → see FEMALE + ANY listings
+  // Not logged in → see all
+  const userGender = user?.gender as string | undefined
+  const genderLocked = userGender === 'MALE' || userGender === 'FEMALE'
 
   const fetchSaved = useCallback(async () => {
     if (!user) return
@@ -54,7 +59,14 @@ function SearchContent() {
     if (minRent) query = query.gte('rent', parseInt(minRent))
     if (maxRent) query = query.lte('rent', parseInt(maxRent))
     if (roomType !== 'ALL') query = query.eq('room_type', roomType)
-    if (gender !== 'ALL') query = query.eq('gender_allowed', gender)
+
+    // Hard gender enforcement: logged-in users only see listings matching their gender or ANY
+    if (userGender === 'MALE') {
+      query = query.in('gender_allowed', ['MALE', 'ANY'])
+    } else if (userGender === 'FEMALE') {
+      query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+    }
+    // Unauthenticated users see all listings
 
     const currentPage = isLoadMore ? page + 1 : 0
     query = query.range(currentPage * 12, currentPage * 12 + 11).order('created_at', { ascending: false })
@@ -67,10 +79,10 @@ function SearchContent() {
       setHasMore(data.length === 12)
     }
     setLoading(false)
-  }, [minRent, maxRent, roomType, gender, page])
+  }, [minRent, maxRent, roomType, userGender, page])
 
   useEffect(() => { fetchSaved() }, [fetchSaved])
-  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, gender]) // eslint-disable-line
+  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, userGender]) // eslint-disable-line
 
   // Handle ?listingId=... to auto-open a listing from external links
   useEffect(() => {
@@ -101,35 +113,34 @@ function SearchContent() {
   }
 
   const FiltersBar = (
-    // Filter bar — sticky inside the list panel
-    // top-0 is relative to the nearest scroll container, NOT the viewport
-    <div className="p-3 bg-white border-b border-border-light sticky top-0 z-10 shadow-sm flex flex-wrap items-center gap-2">
-      <div className="flex items-center text-sm font-semibold text-text-primary mr-1">
-        <SlidersHorizontal className="w-4 h-4 mr-1.5 text-text-muted" /> Filters
+    <div className="p-3 bg-white border-b border-border-light sticky top-0 z-10 shadow-sm space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center text-sm font-semibold text-text-primary mr-1">
+          <SlidersHorizontal className="w-4 h-4 mr-1.5 text-text-muted" /> Filters
+        </div>
+        <Select value={roomType} onValueChange={v => setRoomType(v ?? 'ALL')}>
+          <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue placeholder="Room Type" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Types</SelectItem>
+            <SelectItem value="SINGLE">Single</SelectItem>
+            <SelectItem value="SHARED">Shared</SelectItem>
+            <SelectItem value="1BHK">1 BHK</SelectItem>
+            <SelectItem value="PG">PG</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-1.5">
+          <Input placeholder="Min ₹" className="w-[72px] h-8 text-xs" value={minRent} onChange={e => setMinRent(e.target.value)} />
+          <span className="text-text-muted text-xs">–</span>
+          <Input placeholder="Max ₹" className="w-[72px] h-8 text-xs" value={maxRent} onChange={e => setMaxRent(e.target.value)} />
+        </div>
       </div>
-      <Select value={roomType} onValueChange={v => setRoomType(v ?? 'ALL')}>
-        <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue placeholder="Room Type" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="ALL">All Types</SelectItem>
-          <SelectItem value="SINGLE">Single</SelectItem>
-          <SelectItem value="SHARED">Shared</SelectItem>
-          <SelectItem value="1BHK">1 BHK</SelectItem>
-          <SelectItem value="PG">PG</SelectItem>
-        </SelectContent>
-      </Select>
-      <Select value={gender} onValueChange={v => setGender(v ?? 'ALL')}>
-        <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue placeholder="Gender" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="ALL">Any Gender</SelectItem>
-          <SelectItem value="MALE">Boys Only</SelectItem>
-          <SelectItem value="FEMALE">Girls Only</SelectItem>
-        </SelectContent>
-      </Select>
-      <div className="flex items-center gap-1.5">
-        <Input placeholder="Min ₹" className="w-[72px] h-8 text-xs" value={minRent} onChange={e => setMinRent(e.target.value)} />
-        <span className="text-text-muted text-xs">–</span>
-        <Input placeholder="Max ₹" className="w-[72px] h-8 text-xs" value={maxRent} onChange={e => setMaxRent(e.target.value)} />
-      </div>
+      {/* Gender lock notice */}
+      {genderLocked && (
+        <div className="flex items-center gap-2 text-xs text-text-muted bg-muted-bg rounded-lg px-3 py-1.5 border border-border-light">
+          <span className="text-base">{userGender === 'MALE' ? '♂' : '♀'}</span>
+          Showing <strong className="text-navy">{userGender === 'MALE' ? 'boys-only & co-ed' : 'girls-only & co-ed'}</strong> listings based on your profile
+        </div>
+      )}
     </div>
   )
 
@@ -190,9 +201,9 @@ function SearchContent() {
         <div className="py-8">
           <EmptyState
             icon="search" title="No listings found"
-            description="Try adjusting your filters."
+            description={genderLocked ? `No ${userGender === 'MALE' ? 'boys-only or co-ed' : 'girls-only or co-ed'} listings match your filters.` : 'Try adjusting your filters.'}
             actionLabel="Clear Filters"
-            onAction={() => { setMinRent(''); setMaxRent(''); setRoomType('ALL'); setGender('ALL') }}
+            onAction={() => { setMinRent(''); setMaxRent(''); setRoomType('ALL') }}
           />
         </div>
       ) : (

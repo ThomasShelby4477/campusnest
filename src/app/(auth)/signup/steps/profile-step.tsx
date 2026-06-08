@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod/v4'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,13 +13,13 @@ import { useAuthStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import { UserCircle } from 'lucide-react'
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Use standard 'zod' (not 'zod/v4') so zodResolver works correctly
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   year: z.number().int().min(1).max(5).optional(),
   branch: z.string().min(1, 'Branch is required').optional(),
-  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number'),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
+  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +91 9876543210)'),
+  gender: z.enum(['MALE', 'FEMALE'], { message: 'Please select your gender' }),
 })
 
 type ProfileForm = z.infer<typeof profileSchema>
@@ -42,14 +43,21 @@ export function ProfileStep({ onComplete }: ProfileStepProps) {
     register,
     handleSubmit,
     setValue,
-    formState: { errors },
+    watch,
+    formState: { errors, isValid },
   } = useForm<ProfileForm>({
     mode: 'onChange',
+    resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || '',
-      phone: user?.phone || '',
+      name: user?.name ?? '',
+      phone: user?.phone ?? '',
     },
   })
+
+  // Watch selected values for controlled selects
+  const selectedGender = watch('gender') as 'MALE' | 'FEMALE' | undefined
+  const selectedYear = watch('year') as number | undefined
+  const selectedBranch = watch('branch') as string | undefined
 
   const onSubmit = async (data: ProfileForm) => {
     setLoading(true)
@@ -71,7 +79,7 @@ export function ProfileStep({ onComplete }: ProfileStepProps) {
       })
       const result = await res.json()
       if (!res.ok) {
-        toast.error(result.error || 'Failed to update profile')
+        toast.error(result.error || 'Failed to save profile')
         return
       }
       updateUser(result.profile)
@@ -93,37 +101,65 @@ export function ProfileStep({ onComplete }: ProfileStepProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Full Name */}
           <div className="space-y-1.5">
             <Label htmlFor="profile-name">Full Name</Label>
-            <Input id="profile-name" placeholder="Your full name" {...register('name', { required: true, minLength: 2 })} className="h-11" />
+            <Input
+              id="profile-name"
+              placeholder="Your full name"
+              {...register('name')}
+              className="h-11"
+              disabled={loading}
+            />
             {errors.name && <p className="text-sm text-danger">{errors.name.message}</p>}
           </div>
 
+          {/* Phone */}
           <div className="space-y-1.5">
             <Label htmlFor="profile-phone">Phone Number</Label>
-            <Input id="profile-phone" placeholder="+91 9876543210" {...register('phone', { required: true })} className="h-11" />
+            <Input
+              id="profile-phone"
+              placeholder="+91 9876543210"
+              type="tel"
+              {...register('phone')}
+              className="h-11"
+              disabled={loading}
+            />
             {errors.phone && <p className="text-sm text-danger">{errors.phone.message}</p>}
           </div>
 
+          {/* Gender */}
           <div className="space-y-1.5">
             <Label>Gender</Label>
-            <Select onValueChange={(v) => setValue('gender', v as ProfileForm['gender'], { shouldValidate: true })}>
-              <SelectTrigger className="h-11"><SelectValue placeholder="Select gender" /></SelectTrigger>
+            <Select
+              value={selectedGender ?? ''}
+              onValueChange={(v) => setValue('gender', v as 'MALE' | 'FEMALE', { shouldValidate: true })}
+              disabled={loading}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="MALE">Male</SelectItem>
                 <SelectItem value="FEMALE">Female</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
               </SelectContent>
             </Select>
             {errors.gender && <p className="text-sm text-danger">{errors.gender.message}</p>}
           </div>
 
+          {/* Student-only fields */}
           {!isLandlord && (
             <>
               <div className="space-y-1.5">
                 <Label>Year of Study</Label>
-                <Select onValueChange={(v) => setValue('year', parseInt(v as string), { shouldValidate: true })}>
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Select year" /></SelectTrigger>
+                <Select
+                  value={selectedYear != null ? String(selectedYear) : ''}
+                  onValueChange={(v) => { if (v) setValue('year', parseInt(v), { shouldValidate: true }) }}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
                   <SelectContent>
                     {[1, 2, 3, 4, 5].map((y) => (
                       <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
@@ -134,21 +170,28 @@ export function ProfileStep({ onComplete }: ProfileStepProps) {
 
               <div className="space-y-1.5">
                 <Label>Branch</Label>
-                <Select onValueChange={(v) => setValue('branch', v as string, { shouldValidate: true })}>
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Select branch" /></SelectTrigger>
+                <Select
+                  value={selectedBranch ?? undefined}
+                  onValueChange={(v) => { if (v) setValue('branch', v, { shouldValidate: true }) }}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
                   <SelectContent>
                     {BRANCHES.map((b) => (
                       <SelectItem key={b} value={b}>{b}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.branch && <p className="text-sm text-danger">{errors.branch.message}</p>}
               </div>
             </>
           )}
 
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || !isValid}
             className="w-full h-12 bg-coral hover:bg-coral-dark text-white font-semibold text-base mt-2"
           >
             {loading ? (

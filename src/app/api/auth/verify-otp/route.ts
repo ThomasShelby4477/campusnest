@@ -89,15 +89,25 @@ export async function POST(req: Request) {
   let redirectTo = redirect || '/search'
 
   if (!profile) {
+    // No profile row yet — brand new user, needs to complete signup
     redirectTo = '/signup'
   } else if (profile.role === 'ADMIN') {
     redirectTo = '/admin'
   } else if (!profile.name) {
+    // Profile exists but name not filled in yet
     redirectTo = '/signup'
   } else if (profile.role === 'STUDENT' && !profile.student_id_path) {
+    // Student hasn't uploaded ID yet
     redirectTo = '/signup'
-  } else if (profile.verified_status === 'PENDING' || profile.verified_status === 'REJECTED') {
+  } else if (profile.verified_status === 'PENDING') {
+    // Docs uploaded, awaiting review — show pending screen
     redirectTo = '/signup'
+  } else if (profile.verified_status === 'REJECTED') {
+    // Admin rejected — needs to resubmit
+    redirectTo = '/reverify'
+  } else if (profile.verified_status === 'VERIFIED') {
+    // Fully verified — go wherever they were trying to go
+    redirectTo = redirect || '/search'
   }
 
   console.log('[verify-otp] Redirecting to:', redirectTo)

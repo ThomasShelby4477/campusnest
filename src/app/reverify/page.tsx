@@ -237,7 +237,6 @@ export default function ReverifyPage() {
               <SelectContent>
                 <SelectItem value="MALE">Male</SelectItem>
                 <SelectItem value="FEMALE">Female</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -29,19 +29,28 @@ export async function POST(req: NextRequest) {
 
     const { userId } = result.data
 
-    // Prevent suspending yourself
     if (userId === user.id) {
       return NextResponse.json({ error: 'Cannot suspend yourself' }, { status: 400 })
     }
 
-    const { error } = await supabaseAdmin
+    // 1. Mark profile as inactive in our own table
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({ is_active: false })
       .eq('id', userId)
 
-    if (error) {
-      console.error('Suspend user error:', error)
+    if (profileError) {
+      console.error('Suspend profile error:', profileError)
       return NextResponse.json({ error: 'Failed to suspend user' }, { status: 500 })
+    }
+
+    // 2. Sign out all active Supabase Auth sessions for this user
+    //    This ensures they get kicked out immediately if already logged in.
+    try {
+      await supabaseAdmin.auth.admin.signOut(userId, 'global')
+    } catch (signOutErr) {
+      // Non-fatal — is_active check in SuspensionGuard will still catch them on next load
+      console.warn('Could not sign out sessions for suspended user:', signOutErr)
     }
 
     return NextResponse.json({ success: true })

@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import { Navbar } from '@/components/navbar'
 import { ConsentBanner } from '@/components/consent-banner'
+import { SuspensionGuard } from '@/components/suspension-guard'
+import { headers } from 'next/headers'
 import './globals.css'
 
 const inter = Inter({
@@ -51,15 +53,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? headersList.get('x-invoke-path') ?? ''
+
   return (
     <html lang="en" className={`${inter.variable} antialiased`}>
-      {/*
-        body: removed min-h-full + flex flex-col.
-        These create a secondary scroll container on iOS Safari, causing
-        touch-scroll glitches. Natural document flow works correctly on mobile.
-      */}
       <body className="font-sans bg-background text-foreground overflow-x-hidden">
         <Providers>
+          <SuspensionGuard pathname={pathname} />
           <Navbar />
           {children}
           <ConsentBanner />

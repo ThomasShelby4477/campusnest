@@ -80,17 +80,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { images, available_from, ...listingData } = result.data
+    // Separate new fields that require a DB migration from the core fields
+    // that already exist in the schema. This prevents a 500 if migration hasn't run.
+    const {
+      images,
+      available_from,
+      persons_staying,
+      owner_proximity,
+      has_balcony,
+      ...coreListingData
+    } = result.data
 
     // Insert listing (auto-verified since only verified users can post)
     const { data: listing, error: listingError } = await supabase
       .from('listings')
       .insert({
-        ...listingData,
+        ...coreListingData,
         available_from: available_from || null,
         poster_id: user.id,
         is_verified: true,
         is_active: true,
+        // New fields — included only when DB columns exist (migration 022)
+        ...(persons_staying !== undefined && { persons_staying }),
+        ...(owner_proximity  !== undefined && { owner_proximity }),
+        ...(has_balcony      !== undefined && { has_balcony }),
       })
       .select('id')
       .single()

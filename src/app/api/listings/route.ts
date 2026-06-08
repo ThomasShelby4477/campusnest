@@ -165,18 +165,16 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const url = request.nextUrl
 
-    // Resolve logged-in user's gender and role for hard enforcement
+    // Resolve logged-in user's gender for hard enforcement
     const { data: { user: authUser } } = await supabase.auth.getUser()
     let callerGender: string | null = null
-    let callerRole: string | null = null
     if (authUser) {
       const { data: callerProfile } = await supabase
         .from('profiles')
-        .select('gender, role')
+        .select('gender')
         .eq('id', authUser.id)
         .single()
       callerGender = callerProfile?.gender ?? null
-      callerRole = callerProfile?.role ?? null
     }
 
     let query = supabase
@@ -184,10 +182,9 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         listing_images ( url, is_primary ),
-        profiles!listings_poster_id_fkey!inner ( name, avatar_url, is_active )
+        profiles!listings_poster_id_fkey ( name, avatar_url )
       `)
       .eq('is_active', true)
-      .eq('profiles.is_active', true)
 
     const minRent = url.searchParams.get('minRent')
     const maxRent = url.searchParams.get('maxRent')
@@ -211,13 +208,11 @@ export async function GET(request: NextRequest) {
     if (food === 'true') query = query.eq('food_available', true)
     if (moveIn) query = query.gte('available_from', moveIn)
 
-    // Hard gender enforcement — authenticated users only see matching listings (admins bypass)
-    if (callerRole !== 'ADMIN') {
-      if (callerGender === 'MALE') {
-        query = query.in('gender_allowed', ['MALE', 'ANY'])
-      } else if (callerGender === 'FEMALE') {
-        query = query.in('gender_allowed', ['FEMALE', 'ANY'])
-      }
+    // Hard gender enforcement — authenticated users only see matching listings
+    if (callerGender === 'MALE') {
+      query = query.in('gender_allowed', ['MALE', 'ANY'])
+    } else if (callerGender === 'FEMALE') {
+      query = query.in('gender_allowed', ['FEMALE', 'ANY'])
     }
     // Unauthenticated guests see all listings
 

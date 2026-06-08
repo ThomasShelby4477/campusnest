@@ -57,12 +57,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     .select(`
       *,
       listing_images ( url, is_primary, "order" ),
-      profiles!listings_poster_id_fkey ( name, avatar_url, verified_status, verification_badge, role, is_active )
+      profiles!listings_poster_id_fkey ( name, avatar_url, verified_status, verification_badge, role )
     `)
     .eq('id', id)
     .single()
 
-  if (!listing || !listing.is_active || listing.profiles?.is_active === false) {
+  if (!listing || !listing.is_active) {
     notFound()
   }
 
@@ -70,12 +70,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const { data: { user } } = await supabase.auth.getUser()
   let isVerifiedUser = false
   let userGender: string | null = null
-  let userRole: string | null = null
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('verified_status, gender, role').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('profiles').select('verified_status, gender').eq('id', user.id).single()
     isVerifiedUser = profile?.verified_status === 'VERIFIED'
     userGender = profile?.gender ?? null
-    userRole = profile?.role ?? null
   }
 
   // ── Hard gender access check ──────────────────────────────
@@ -84,7 +82,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const genderAllowed = listing.gender_allowed // 'MALE' | 'FEMALE' | 'ANY'
   const genderBlocked =
     user !== null &&
-    userRole !== 'ADMIN' &&
     userGender !== null &&
     genderAllowed !== 'ANY' &&
     genderAllowed !== userGender

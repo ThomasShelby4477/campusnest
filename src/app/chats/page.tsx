@@ -23,8 +23,8 @@ export default function ChatsPage() {
       .from('matches')
       .select(`
         id, chat_type, created_at, is_closed, user_a_id, user_b_id,
-        user_a:profiles!matches_user_a_id_fkey ( id, name, avatar_url, is_active ),
-        user_b:profiles!matches_user_b_id_fkey ( id, name, avatar_url, is_active )
+        user_a:profiles!matches_user_a_id_fkey ( id, name, avatar_url ),
+        user_b:profiles!matches_user_b_id_fkey ( id, name, avatar_url )
       `)
       .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
       .order('created_at', { ascending: false })
@@ -175,8 +175,6 @@ export default function ChatsPage() {
               const hasUnread = !chat.is_closed && chat.unreadCount > 0
               const isMineLastMsg = last?.sender_id === currentUserId
               const closed = chat.is_closed
-              const isSuspended = other?.is_active === false
-              const displayName = isSuspended ? 'User not found' : (other?.name || 'User')
 
               const typeLabel =
                 closed ? 'Closed' :
@@ -189,11 +187,11 @@ export default function ChatsPage() {
                   href={`/chat/${chat.id}`}
                   className={`flex items-center gap-3 p-4 hover:bg-muted-bg/50 transition-colors ${
                     i < chats.length - 1 ? 'border-b border-border-light' : ''
-                  } ${hasUnread ? 'bg-coral/[0.03]' : ''} ${closed || isSuspended ? 'opacity-60' : ''}`}
+                  } ${hasUnread ? 'bg-coral/[0.03]' : ''} ${closed ? 'opacity-60' : ''}`}
                 >
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted-bg shrink-0 border border-border-light">
-                    {other?.avatar_url && !isSuspended ? (
-                      <Image src={other.avatar_url} alt={displayName} fill className="object-cover" />
+                    {other?.avatar_url ? (
+                      <Image src={other.avatar_url} alt={other.name || ''} fill className="object-cover" />
                     ) : (
                       <UserCircle2 className="w-full h-full text-text-muted p-1" />
                     )}
@@ -203,7 +201,7 @@ export default function ChatsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <h3 className={`font-bold truncate ${hasUnread ? 'text-navy' : 'text-text-primary'}`}>
-                        {displayName}
+                        {other?.name || 'User'}
                       </h3>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${

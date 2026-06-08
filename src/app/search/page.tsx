@@ -37,10 +37,9 @@ function SearchContent() {
 
   // Gender filter: derived from the signed-in user's gender — cannot be overridden
   // MALE users → see MALE + ANY listings; FEMALE users → see FEMALE + ANY listings
-  // Not logged in → see all. ADMINs see all.
+  // Not logged in → see all
   const userGender = user?.gender as string | undefined
-  const isAdmin = user?.role === 'ADMIN'
-  const genderLocked = !isAdmin && (userGender === 'MALE' || userGender === 'FEMALE')
+  const genderLocked = userGender === 'MALE' || userGender === 'FEMALE'
 
   const fetchSaved = useCallback(async () => {
     if (!user) return
@@ -54,9 +53,8 @@ function SearchContent() {
     const supabase = createClient()
     let query = supabase
       .from('listings')
-      .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey!inner ( name, avatar_url, is_active )`)
+      .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey ( name, avatar_url )`)
       .eq('is_active', true)
-      .eq('profiles.is_active', true)
 
     if (minRent) query = query.gte('rent', parseInt(minRent))
     if (maxRent) query = query.lte('rent', parseInt(maxRent))

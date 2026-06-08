@@ -49,7 +49,7 @@ export async function GET(
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, name, avatar_url, role, gender, branch, year, verified_status, verification_badge, looking_for_buddy, is_active')
+      .select('id, name, avatar_url, role, gender, branch, year, verified_status, verification_badge, looking_for_buddy')
       .eq('id', id)
       .single()
 

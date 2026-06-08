@@ -5,16 +5,18 @@ export async function GET() {
   // Use server client so we have access to the authenticated user's session
   const supabase = await createClient()
 
-  // Resolve the logged-in user's gender for filtering
+  // Resolve the logged-in user's gender and role for filtering
   const { data: { user } } = await supabase.auth.getUser()
   let userGender: string | null = null
+  let userRole: string | null = null
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('gender')
+      .select('gender, role')
       .eq('id', user.id)
       .single()
     userGender = profile?.gender ?? null
+    userRole = profile?.role ?? null
   }
 
   let query = supabase
@@ -39,10 +41,12 @@ export async function GET() {
 
   // Hard gender filter — same rule as search page:
   // MALE users see MALE + ANY; FEMALE users see FEMALE + ANY; guests see all
-  if (userGender === 'MALE') {
-    query = query.in('gender_allowed', ['MALE', 'ANY'])
-  } else if (userGender === 'FEMALE') {
-    query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+  if (userRole !== 'ADMIN') {
+    if (userGender === 'MALE') {
+      query = query.in('gender_allowed', ['MALE', 'ANY'])
+    } else if (userGender === 'FEMALE') {
+      query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+    }
   }
 
   const { data, error } = await query

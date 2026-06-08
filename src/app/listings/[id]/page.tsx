@@ -70,18 +70,21 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const { data: { user } } = await supabase.auth.getUser()
   let isVerifiedUser = false
   let userGender: string | null = null
+  let userRole: string | null = null
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('verified_status, gender').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('profiles').select('verified_status, gender, role').eq('id', user.id).single()
     isVerifiedUser = profile?.verified_status === 'VERIFIED'
     userGender = profile?.gender ?? null
+    userRole = profile?.role ?? null
   }
 
   // ── Hard gender access check ──────────────────────────────
-  // Authenticated users can only view listings that match their gender or are ANY.
+  // Authenticated users (non-admins) can only view listings that match their gender or are ANY.
   // Unauthenticated visitors are not restricted (they can't contact anyway).
   const genderAllowed = listing.gender_allowed // 'MALE' | 'FEMALE' | 'ANY'
   const genderBlocked =
     user !== null &&
+    userRole !== 'ADMIN' &&
     userGender !== null &&
     genderAllowed !== 'ANY' &&
     genderAllowed !== userGender

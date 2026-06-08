@@ -39,7 +39,8 @@ function SearchContent() {
   // MALE users → see MALE + ANY listings; FEMALE users → see FEMALE + ANY listings
   // Not logged in → see all
   const userGender = user?.gender as string | undefined
-  const genderLocked = userGender === 'MALE' || userGender === 'FEMALE'
+  const isAdmin = user?.role === 'ADMIN'
+  const genderLocked = !isAdmin && (userGender === 'MALE' || userGender === 'FEMALE')
 
   const fetchSaved = useCallback(async () => {
     if (!user) return
@@ -61,11 +62,13 @@ function SearchContent() {
     if (maxRent) query = query.lte('rent', parseInt(maxRent))
     if (roomType !== 'ALL') query = query.eq('room_type', roomType)
 
-    // Hard gender enforcement: logged-in users only see listings matching their gender or ANY
-    if (userGender === 'MALE') {
-      query = query.in('gender_allowed', ['MALE', 'ANY'])
-    } else if (userGender === 'FEMALE') {
-      query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+    // Hard gender enforcement: logged-in users (non-admins) only see listings matching their gender or ANY
+    if (!isAdmin) {
+      if (userGender === 'MALE') {
+        query = query.in('gender_allowed', ['MALE', 'ANY'])
+      } else if (userGender === 'FEMALE') {
+        query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+      }
     }
     // Unauthenticated users see all listings
 
@@ -80,7 +83,7 @@ function SearchContent() {
       setHasMore(data.length === 12)
     }
     setLoading(false)
-  }, [minRent, maxRent, roomType, userGender, page])
+  }, [minRent, maxRent, roomType, userGender, page, isAdmin])
 
   useEffect(() => { fetchSaved() }, [fetchSaved])
   useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, userGender]) // eslint-disable-line

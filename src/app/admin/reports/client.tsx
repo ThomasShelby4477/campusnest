@@ -110,6 +110,23 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
     }
   }
 
+  const handleReopen = async (report: any) => {
+    setLoadingId(report.id)
+    // If this was a USER report that was RESOLVED (user was likely suspended), lift the ban
+    if (report.target_type === 'USER' && report.status === 'RESOLVED') {
+      try {
+        await fetch('/api/admin/unsuspend-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: report.target_id }),
+        })
+        toast.success('User unsuspended')
+      } catch { /* non-fatal */ }
+    }
+    await updateStatus(report.id, 'OPEN')
+    setLoadingId(null)
+  }
+
   // ── Filter counts ─────────────────────────────────────────────
   const counts = {
     ALL: reports.length,
@@ -271,7 +288,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                           {/* Reopen */}
                           {!isActive && (
                             <Button variant="outline" size="sm" disabled={loadingId === r.id}
-                              onClick={() => updateStatus(r.id, 'OPEN')}
+                              onClick={() => handleReopen(r)}
                               className="text-text-muted hover:text-navy w-full justify-start text-xs">
                               <RotateCcw className="w-3 h-3 mr-1" /> Reopen
                             </Button>
@@ -572,7 +589,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                   ) : (
                     <div className="flex gap-2 pt-2 border-t border-border-light">
                       <Button size="sm" variant="outline" disabled={loadingId === r.id}
-                        onClick={() => updateStatus(r.id, 'OPEN')}
+                        onClick={() => handleReopen(r)}
                         className="text-text-muted hover:text-navy">
                         <RotateCcw className="w-3 h-3 mr-1" /> Reopen
                       </Button>

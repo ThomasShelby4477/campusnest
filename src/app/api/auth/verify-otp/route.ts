@@ -51,11 +51,24 @@ export async function POST(req: Request) {
   // Session cookies are now set. Determine where to redirect.
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role, name, student_id_path, verified_status')
+    .select('role, name, student_id_path, verified_status, is_active')
     .eq('id', data.user.id)
     .single()
 
   console.log('[verify-otp] Profile:', profile)
+
+  // ── Suspension gate ──────────────────────────────────────────
+  // If the account is suspended, revoke the fresh session immediately
+  // so the tokens are never sent to the browser.
+  if (profile?.is_active === false) {
+    try {
+      await supabaseAdmin.auth.admin.signOut(data.user.id, 'global')
+    } catch { /* best-effort */ }
+    return NextResponse.json(
+      { error: 'Your account has been suspended. If you believe this is a mistake, contact email@campusnest.com' },
+      { status: 403 }
+    )
+  }
 
   let redirectTo = redirect || '/search'
 

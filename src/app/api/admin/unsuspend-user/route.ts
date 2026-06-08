@@ -29,40 +29,29 @@ export async function POST(req: NextRequest) {
 
     const { userId } = result.data
 
-    if (userId === user.id) {
-      return NextResponse.json({ error: 'Cannot suspend yourself' }, { status: 400 })
-    }
-
-    // 1. Mark profile as inactive
+    // 1. Re-activate profile
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ is_active: false })
+      .update({ is_active: true })
       .eq('id', userId)
 
     if (profileError) {
-      console.error('Suspend profile error:', profileError)
-      return NextResponse.json({ error: 'Failed to suspend user' }, { status: 500 })
+      console.error('Unsuspend profile error:', profileError)
+      return NextResponse.json({ error: 'Failed to unsuspend user' }, { status: 500 })
     }
 
-    // 2. Ban at Supabase Auth level — prevents new OTP requests & logins
+    // 2. Lift the Supabase Auth ban
     try {
       await supabaseAdmin.auth.admin.updateUserById(userId, {
-        ban_duration: '876000h', // ~100 years
+        ban_duration: 'none',
       })
-    } catch (banErr) {
-      console.warn('Auth-level ban failed (non-fatal):', banErr)
-    }
-
-    // 3. Invalidate all existing active sessions immediately
-    try {
-      await supabaseAdmin.auth.admin.signOut(userId, 'global')
-    } catch (signOutErr) {
-      console.warn('Session sign-out failed (non-fatal):', signOutErr)
+    } catch (err) {
+      console.warn('Auth-level unban failed (non-fatal):', err)
     }
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('POST /api/admin/suspend-user error:', err)
+    console.error('POST /api/admin/unsuspend-user error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

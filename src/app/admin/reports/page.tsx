@@ -22,11 +22,11 @@ export default async function ReportsAdminPage() {
   const { data: listingsData } = listingIds.length > 0
     ? await supabaseAdmin
         .from('listings')
-        .select('id, title')
+        .select('id, title, is_active')
         .in('id', listingIds)
     : { data: [] }
-  const listingMap: Record<string, string> = {}
-  for (const l of listingsData || []) listingMap[l.id] = l.title
+  const listingMap: Record<string, { title: string; is_active: boolean }> = {}
+  for (const l of listingsData || []) listingMap[l.id] = { title: l.title, is_active: l.is_active }
 
   // For USER reports → fetch the reported user profile in one batch query
   const userIds = [...new Set(
@@ -41,13 +41,15 @@ export default async function ReportsAdminPage() {
   const userMap: Record<string, { name: string; email: string }> = {}
   for (const u of usersData || []) userMap[u.id] = { name: u.name, email: u.email }
 
-  // Enrich each report with resolved target label
+  // Enrich each report with resolved target label + listing active status
   const enrichedReports = reports.map(r => ({
     ...r,
     target_label: r.target_type === 'LISTING'
-      ? (listingMap[r.target_id] ?? `Listing ${r.target_id.slice(0, 8)}…`)
+      ? (listingMap[r.target_id]?.title ?? `Listing ${r.target_id.slice(0, 8)}…`)
       : (userMap[r.target_id]?.name ?? `User ${r.target_id.slice(0, 8)}…`),
     target_email: r.target_type === 'USER' ? userMap[r.target_id]?.email : null,
+    // Lets the client show "Restore" button when a listing was removed
+    listing_is_active: r.target_type === 'LISTING' ? (listingMap[r.target_id]?.is_active ?? null) : null,
   }))
 
   return (

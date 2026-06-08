@@ -4,7 +4,7 @@ import { RemovedListingsClient } from './client'
 export const dynamic = 'force-dynamic'
 
 export default async function RemovedListingsPage() {
-  const { data: listings } = await supabaseAdmin
+  const { data: listings, error } = await supabaseAdmin
     .from('listings')
     .select(`
       *,
@@ -12,8 +12,9 @@ export default async function RemovedListingsPage() {
       profiles!listings_poster_id_fkey(name, email, verified_status, avatar_url)
     `)
     .eq('is_active', false)
-    .order('removed_at', { ascending: false, nullsFirst: false })
     .order('updated_at', { ascending: false })
+
+  if (error) console.error('removed-listings fetch error:', error)
 
   return (
     <div>

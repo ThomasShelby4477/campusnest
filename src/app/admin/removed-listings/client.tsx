@@ -56,17 +56,6 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
     return imgs.find((img: any) => img.is_primary)?.url || imgs[0]?.url || null
   }
 
-  if (initialListings.length === 0) {
-    return (
-      <div className="bg-white rounded-3xl border border-border-light shadow-lg shadow-navy/[0.03] p-16 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
-          <Home className="w-8 h-8 text-success" />
-        </div>
-        <h2 className="text-xl font-bold text-navy mb-1">No Removed Listings</h2>
-        <p className="text-text-muted">All listings are currently active. Removed listings will appear here.</p>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-4">
@@ -85,7 +74,15 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
         </span>
       </div>
 
-      {filtered.length === 0 ? (
+      {listings.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-border-light shadow-lg shadow-navy/[0.03] p-16 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+            <Home className="w-8 h-8 text-success" />
+          </div>
+          <h2 className="text-xl font-bold text-navy mb-1">No Removed Listings</h2>
+          <p className="text-text-muted">All listings are currently active. Removed listings will appear here.</p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="bg-white rounded-3xl border border-border-light p-12 text-center text-text-muted text-sm">
           No listings match your search.
         </div>

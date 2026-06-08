@@ -43,12 +43,16 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
     setLoadingId(null)
   }
 
-  // ── Suspend user ─────────────────────────────────────────────
+  // ── Suspend user (via server API to bypass RLS) ─────────────
   const handleSuspend = async (userId: string, reportId: string) => {
     if (!confirm('Suspend this user? They will no longer be able to log in.')) return
     setLoadingId(reportId)
-    const { error } = await supabase.from('profiles').update({ is_active: false }).eq('id', userId)
-    if (error) {
+    const res = await fetch('/api/admin/suspend-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+    if (!res.ok) {
       toast.error('Failed to suspend user')
     } else {
       toast.success('User suspended')

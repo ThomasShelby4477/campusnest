@@ -45,15 +45,18 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Ban at Supabase Auth level — prevents new OTP requests & logins
-    try {
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        ban_duration: '876000h', // ~100 years
-      })
-    } catch (banErr) {
-      console.warn('Auth-level ban failed (non-fatal):', banErr)
+    //    Run twice if first attempt fails (handles ban_duration state edge cases)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: '876000h' })
+        break
+      } catch (banErr) {
+        if (attempt === 1) console.warn('Auth-level ban failed after retry:', banErr)
+        await new Promise(r => setTimeout(r, 200))
+      }
     }
 
-    // 3. Invalidate all existing active sessions immediately
+    // 3. Invalidate ALL existing sessions immediately
     try {
       await supabaseAdmin.auth.admin.signOut(userId, 'global')
     } catch (signOutErr) {

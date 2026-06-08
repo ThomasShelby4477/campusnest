@@ -40,13 +40,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to unsuspend user' }, { status: 500 })
     }
 
-    // 2. Lift the Supabase Auth ban
-    try {
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        ban_duration: 'none',
-      })
-    } catch (err) {
-      console.warn('Auth-level unban failed (non-fatal):', err)
+    // 2. Lift the Supabase Auth ban (retry once on failure)
+    let banLifted = false
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: 'none' })
+        banLifted = true
+        break
+      } catch (err) {
+        if (attempt === 1) console.warn('Auth-level unban failed after retry:', err)
+        await new Promise(r => setTimeout(r, 200))
+      }
+    }
+
+    if (!banLifted) {
+      console.error('Could not lift auth ban for user:', userId)
+      // Still return success since is_active=true allows login via verify-otp fallback
     }
 
     return NextResponse.json({ success: true })

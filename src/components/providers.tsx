@@ -99,8 +99,43 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
     setupRealtimeWatch()
 
+    // ── Tab visibility / focus check ─────────────────────────
+    // Re-validates suspension every time the user switches back to this tab.
+    // This catches ban/unban/ban cycles where Realtime might have missed a change.
+    const checkSuspension = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) return
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' })
+        if (res.status === 401) {
+          clearUser()
+          window.location.href = '/login'
+          return
+        }
+        if (res.ok) {
+          const { profile } = await res.json()
+          if (profile?.is_active === false) {
+            try { await fetch('/api/auth/signout', { method: 'POST' }) } catch { /* best-effort */ }
+            await supabase.auth.signOut()
+            clearUser()
+            window.location.href = '/suspended'
+          }
+        }
+      } catch { /* ignore network errors */ }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkSuspension()
+    }
+    const handleFocus = () => checkSuspension()
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
     return () => {
       authSubscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
       if (realtimeChannel) supabase.removeChannel(realtimeChannel)
     }
   }, [setUser, setLoading, clearUser])

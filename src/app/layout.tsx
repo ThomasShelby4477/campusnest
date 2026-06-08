@@ -48,7 +48,7 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-content',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode

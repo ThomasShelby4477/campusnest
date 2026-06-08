@@ -231,8 +231,8 @@ export function PhotoGalleryModal({ photos, initialIndex = 0, onClose }: PhotoGa
       >
         {/* Popup card */}
         <div
-          className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl animate-scale-in"
-          style={{ background: '#1E3A5F', border: '1px solid rgba(255,255,255,0.12)' }}
+          className="relative w-full max-w-2xl flex flex-col rounded-2xl overflow-hidden shadow-2xl animate-scale-in"
+          style={{ background: '#1E3A5F', border: '1px solid rgba(255,255,255,0.12)', height: 'min(85vh, 560px)' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -325,8 +325,9 @@ export function PhotoGalleryModal({ photos, initialIndex = 0, onClose }: PhotoGa
         style={{
           background: '#1E3A5F',
           border: '1px solid rgba(255,255,255,0.12)',
-          maxHeight: 'min(90vh, 700px)',
-          // Stop click events from bubbling to backdrop
+          // Give a concrete height so flex-1 on the image area has something to fill.
+          // max-height alone is not enough — flex children need a defined height on the parent.
+          height: 'min(90vh, 680px)',
         }}
         onClick={e => e.stopPropagation()}
         onMouseLeave={onMouseUp}

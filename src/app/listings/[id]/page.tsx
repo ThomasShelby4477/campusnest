@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ListingContactButton } from './contact-button'
 import { BackButton } from './back-button'
 import { ListingHero } from './listing-hero'
+import { ReportListingButton } from '@/components/report-listing-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -317,9 +318,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 <p className="text-xs text-text-muted mb-4">
                   Never transfer money before viewing the property in person and signing an agreement.
                 </p>
-                <Button variant="outline" size="sm" className="w-full text-text-muted">
-                  Report this listing
-                </Button>
+                <ReportListingButton listingId={listing.id} isLoggedIn={!!user} />
               </div>
 
             </div>

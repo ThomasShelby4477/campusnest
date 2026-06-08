@@ -28,12 +28,38 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
 
   const handleAction = async (userId: string, updates: any) => {
     setLoadingId(userId)
-    const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
-    if (error) {
-      toast.error('Failed to update user')
+    if ('is_active' in updates) {
+      const isSuspending = !updates.is_active
+      if (isSuspending && !confirm('Suspend this user? They will be locked out and notified.')) {
+        setLoadingId(null)
+        return
+      }
+
+      try {
+        const endpoint = isSuspending ? '/api/admin/suspend-user' : '/api/admin/unsuspend-user'
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        })
+        if (!res.ok) {
+          toast.error(isSuspending ? 'Failed to suspend user' : 'Failed to unsuspend user')
+        } else {
+          setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: !isSuspending } : u))
+          toast.success(isSuspending ? 'User suspended' : 'User unsuspended')
+        }
+      } catch (err) {
+        console.error(err)
+        toast.error('An error occurred')
+      }
     } else {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u))
-      toast.success('User updated successfully')
+      const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
+      if (error) {
+        toast.error('Failed to update user')
+      } else {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u))
+        toast.success('User updated successfully')
+      }
     }
     setLoadingId(null)
   }
@@ -53,7 +79,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
     if (roleFilter !== 'ALL') list = list.filter(u => u.role === roleFilter)
     if (verifiedFilter !== 'ALL') list = list.filter(u => u.verified_status === verifiedFilter)
     if (activeFilter === 'ACTIVE') list = list.filter(u => u.is_active !== false)
-    if (activeFilter === 'BANNED') list = list.filter(u => u.is_active === false)
+    if (activeFilter === 'SUSPENDED') list = list.filter(u => u.is_active === false)
 
     list = [...list].sort((a, b) => {
       if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -72,7 +98,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
     total: users.length,
     admins: users.filter(u => u.role === 'ADMIN').length,
     verified: users.filter(u => u.verified_status === 'VERIFIED').length,
-    banned: users.filter(u => u.is_active === false).length,
+    suspended: users.filter(u => u.is_active === false).length,
     pending: users.filter(u => u.verified_status === 'PENDING').length,
   }
 
@@ -85,7 +111,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
           { label: 'Total Users', value: counts.total, color: 'bg-navy/10 text-navy' },
           { label: 'Verified', value: counts.verified, color: 'bg-success/10 text-success' },
           { label: 'Pending', value: counts.pending, color: 'bg-warning/10 text-warning' },
-          { label: 'Banned', value: counts.banned, color: 'bg-danger/10 text-danger' },
+          { label: 'Suspended', value: counts.suspended, color: 'bg-danger/10 text-danger' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-border-light px-4 py-3 shadow-sm">
             <p className={`text-xl font-black ${s.color.split(' ')[1]}`}>{s.value}</p>
@@ -146,7 +172,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
             <SelectContent>
               <SelectItem value="ALL">All Users</SelectItem>
               <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="BANNED">Banned</SelectItem>
+              <SelectItem value="SUSPENDED">Suspended</SelectItem>
             </SelectContent>
           </Select>
 
@@ -219,7 +245,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                           {u.verified_status}
                         </span>
                         {!u.is_active && (
-                          <span className="text-xs font-bold px-2 py-1 rounded-full bg-danger/10 text-danger">Banned</span>
+                          <span className="text-xs font-bold px-2 py-1 rounded-full bg-danger/10 text-danger">Suspended</span>
                         )}
                       </div>
                     </td>
@@ -241,7 +267,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                           disabled={loadingId === u.id}
                           onClick={() => handleAction(u.id, { is_active: !u.is_active })}
                           className="text-xs rounded-lg">
-                          <Ban className="w-3.5 h-3.5 mr-1" /> {u.is_active ? 'Ban' : 'Unban'}
+                          <Ban className="w-3.5 h-3.5 mr-1" /> {u.is_active ? 'Suspend' : 'Unsuspend'}
                         </Button>
                       </div>
                     </td>
@@ -285,7 +311,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${u.role === 'ADMIN' ? 'bg-navy/10 text-navy' : u.role === 'LANDLORD' ? 'bg-coral/10 text-coral' : 'bg-muted-bg text-text-muted'}`}>{u.role}</span>
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${u.verified_status === 'VERIFIED' ? 'bg-success/10 text-success' : u.verified_status === 'REJECTED' ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'}`}>{u.verified_status}</span>
-                    {!u.is_active && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">Banned</span>}
+                    {!u.is_active && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-danger/10 text-danger">Suspended</span>}
                   </div>
                   {isExpanded ? <ChevronUp className="w-4 h-4 text-text-muted shrink-0" /> : <ChevronDown className="w-4 h-4 text-text-muted shrink-0" />}
                 </button>
@@ -304,7 +330,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                     <Button variant={u.is_active ? 'destructive' : 'outline'} size="sm" className="w-full h-10 rounded-xl justify-start text-sm"
                       disabled={isLoading}
                       onClick={() => handleAction(u.id, { is_active: !u.is_active })}>
-                      <Ban className="w-4 h-4 mr-2" /> {u.is_active ? 'Ban User' : 'Unban User'}
+                      <Ban className="w-4 h-4 mr-2" /> {u.is_active ? 'Suspend User' : 'Unsuspend User'}
                     </Button>
                   </div>
                 )}

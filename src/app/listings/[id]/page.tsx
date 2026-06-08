@@ -57,12 +57,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     .select(`
       *,
       listing_images ( url, is_primary, "order" ),
-      profiles!listings_poster_id_fkey ( name, avatar_url, verified_status, verification_badge, role )
+      profiles!listings_poster_id_fkey ( name, avatar_url, verified_status, verification_badge, role, is_active )
     `)
     .eq('id', id)
     .single()
 
-  if (!listing || !listing.is_active) {
+  if (!listing || !listing.is_active || listing.profiles?.is_active === false) {
     notFound()
   }
 

@@ -42,9 +42,10 @@ export async function POST(
     // Fetch listing to get poster info
     const { data: listing, error: listingErr } = await supabaseAdmin
       .from('listings')
-      .select('id, poster_id, title')
+      .select('id, poster_id, title, profiles!listings_poster_id_fkey!inner(is_active)')
       .eq('id', listingId)
       .eq('is_active', true)
+      .eq('profiles.is_active', true)
       .single()
 
     if (listingErr || !listing) {

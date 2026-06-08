@@ -53,8 +53,9 @@ function SearchContent() {
     const supabase = createClient()
     let query = supabase
       .from('listings')
-      .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey ( name, avatar_url )`)
+      .select(`*, listing_images ( url, is_primary ), profiles!listings_poster_id_fkey!inner ( name, avatar_url, is_active )`)
       .eq('is_active', true)
+      .eq('profiles.is_active', true)
 
     if (minRent) query = query.gte('rent', parseInt(minRent))
     if (maxRent) query = query.lte('rent', parseInt(maxRent))

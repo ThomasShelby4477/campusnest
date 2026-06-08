@@ -31,9 +31,11 @@ export async function GET() {
       has_ac,
       food_available,
       gender_allowed,
-      listing_images ( url, is_primary, "order" )
+      listing_images ( url, is_primary, "order" ),
+      profiles!listings_poster_id_fkey!inner ( is_active )
     `)
     .eq('is_active', true)
+    .eq('profiles.is_active', true)
 
   // Hard gender filter — same rule as search page:
   // MALE users see MALE + ANY; FEMALE users see FEMALE + ANY; guests see all

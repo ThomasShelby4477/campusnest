@@ -182,9 +182,10 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         listing_images ( url, is_primary ),
-        profiles!listings_poster_id_fkey ( name, avatar_url )
+        profiles!listings_poster_id_fkey!inner ( name, avatar_url, is_active )
       `)
       .eq('is_active', true)
+      .eq('profiles.is_active', true)
 
     const minRent = url.searchParams.get('minRent')
     const maxRent = url.searchParams.get('maxRent')

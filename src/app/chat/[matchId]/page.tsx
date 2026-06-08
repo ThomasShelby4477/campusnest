@@ -58,6 +58,9 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
 
   const prevMessagesLength = useRef(0)
 
+  const isSuspended = otherUser?.is_active === false
+  const displayName = isSuspended ? 'User not found' : (otherUser?.name || 'User')
+
   useEffect(() => {
     if (messages.length === 0) return
 
@@ -282,18 +285,18 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <button 
-            onClick={() => setShowProfileDialog(true)}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
+            onClick={() => !isSuspended && setShowProfileDialog(true)}
+            className={`flex items-center gap-3 text-left ${isSuspended ? 'cursor-default' : 'hover:opacity-80 transition-opacity'}`}
           >
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-navy/5 shrink-0">
-              {otherUser?.avatar_url ? (
-                <Image src={otherUser.avatar_url} alt={otherUser.name || 'User'} fill className="object-cover" />
+              {otherUser?.avatar_url && !isSuspended ? (
+                <Image src={otherUser.avatar_url} alt={displayName} fill className="object-cover" />
               ) : (
                 <UserCircle2 className="w-full h-full text-text-muted" />
               )}
             </div>
             <div>
-              <h2 className="font-bold text-text-primary leading-tight">{otherUser?.name || 'User'}</h2>
+              <h2 className="font-bold text-text-primary leading-tight">{displayName}</h2>
               <p className="text-xs text-text-muted font-medium">
                 {chatType === 'LISTING' ? 'Listing Inquiry' : chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'}
               </p>
@@ -302,15 +305,17 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
         </div>
         <div className="flex items-center gap-2">
           {/* Report user button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-text-muted hover:text-danger"
-            onClick={() => { setShowReport(true); setReportStep('pick'); setReportReason(null); setReportDesc('') }}
-            title="Report this user"
-          >
-            <Flag className="w-5 h-5" />
-          </Button>
+          {!isSuspended && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-text-muted hover:text-danger"
+              onClick={() => { setShowReport(true); setReportStep('pick'); setReportReason(null); setReportDesc('') }}
+              title="Report this user"
+            >
+              <Flag className="w-5 h-5" />
+            </Button>
+          )}
           {!isClosed && (
             <Button
               variant="ghost"
@@ -329,13 +334,13 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         <div className="text-center pb-6">
           <div className="w-20 h-20 bg-navy/5 rounded-full flex items-center justify-center mx-auto mb-3 overflow-hidden relative">
-            {otherUser?.avatar_url ? (
-               <Image src={otherUser.avatar_url} alt={otherUser.name} fill className="object-cover" />
+            {otherUser?.avatar_url && !isSuspended ? (
+               <Image src={otherUser.avatar_url} alt={displayName} fill className="object-cover" />
             ) : (
               <UserCircle2 className="w-12 h-12 text-text-muted" />
             )}
           </div>
-          <h3 className="font-bold text-text-primary text-lg">Chat with {otherUser?.name}</h3>
+          <h3 className="font-bold text-text-primary text-lg">Chat with {displayName}</h3>
           <p className="text-sm text-text-muted mt-1">
             {chatType === 'LISTING'
               ? 'Discuss the listing details and schedule a viewing.'
@@ -380,16 +385,16 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
                       </div>
                     )
                   ) : (
-                    otherUser?.avatar_url ? (
+                    otherUser?.avatar_url && !isSuspended ? (
                       <Image 
                         src={otherUser.avatar_url} 
-                        alt={otherUser.name || 'User'} 
+                        alt={displayName} 
                         fill 
                         className="object-cover" 
                       />
                     ) : (
                       <div className="w-full h-full bg-coral flex items-center justify-center text-[10px] text-white font-bold">
-                        {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {displayName.charAt(0).toUpperCase()}
                       </div>
                     )
                   )}
@@ -433,13 +438,13 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       </div>
 
       {/* Input or Closed Banner */}
-      {isClosed ? (
+      {isClosed || isSuspended ? (
         <div className="bg-muted-bg border-t border-border-light p-4 shrink-0 flex flex-col items-center justify-center gap-3">
           <div className="flex items-center justify-center gap-2 text-text-muted text-sm font-medium py-1">
             <XCircle className="w-4 h-4 text-danger" />
-            <span>This chat has been permanently closed. Messages are read-only.</span>
+            <span>{isSuspended ? 'This user is no longer available.' : 'This chat has been permanently closed. Messages are read-only.'}</span>
           </div>
-          {(!closedBy || closedBy === currentUser?.id) && (
+          {!isSuspended && (!closedBy || closedBy === currentUser?.id) && (
             <Button variant="outline" size="sm" onClick={handleReopenChat} disabled={closing}>
               {closing ? 'Reopening...' : 'Reopen Chat'}
             </Button>

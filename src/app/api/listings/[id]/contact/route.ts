@@ -42,12 +42,16 @@ export async function POST(
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
     }
 
-    // Get poster's phone
+    // Get poster's phone and active status
     const { data: posterProfile } = await supabaseAdmin
       .from('profiles')
-      .select('phone')
+      .select('phone, is_active')
       .eq('id', listing.poster_id)
       .single()
+
+    if (!posterProfile || posterProfile.is_active === false) {
+      return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
+    }
 
     if (!posterProfile?.phone) {
       return NextResponse.json(

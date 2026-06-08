@@ -19,6 +19,10 @@ const listingSchema = z.object({
   furnished: z.enum(['FURNISHED', 'SEMI', 'UNFURNISHED']),
   gender_allowed: z.enum(['MALE', 'FEMALE', 'ANY']),
   roommates_needed: z.number().int().min(1).default(1),
+  // New fields
+  persons_staying: z.number().int().min(0).default(0),
+  owner_proximity: z.enum(['SAME_BUILDING', 'NEARBY', 'FAR']).default('NEARBY'),
+  has_balcony: z.boolean().default(false),
   has_wifi: z.boolean().default(false),
   has_ac: z.boolean().default(false),
   food_available: z.boolean().default(false),

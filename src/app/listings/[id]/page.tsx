@@ -235,7 +235,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                       {hasBalcony ? 'Available' : 'Not available'}
                     </p>
                   </div>
-                )}
+                </div>
+
 
                 {/* Water */}
                 <div className="flex items-center gap-3 p-4 bg-white border border-border-light rounded-xl">

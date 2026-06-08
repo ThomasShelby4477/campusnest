@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import {
   Ban, Check, ExternalLink, Clock, RotateCcw,
   Eye, X, ChevronRight, Home, Mail, Shield,
-  ImageIcon, AlertTriangle, UserCircle2,
+  ImageIcon, AlertTriangle, UserCircle2, ChevronDown, ChevronUp,
 } from 'lucide-react'
 
 // ── Display helpers ───────────────────────────────────────────
@@ -32,6 +32,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
   const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED'>('OPEN')
   const [detailsPanel, setDetailsPanel] = useState<{ report: any; data: any } | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // ── API helpers ───────────────────────────────────────────────
   const updateStatus = async (reportId: string, status: string) => {
@@ -112,7 +113,6 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
 
   const handleReopen = async (report: any) => {
     setLoadingId(report.id)
-    // If this was a USER report that was RESOLVED (user was likely suspended), lift the ban
     if (report.target_type === 'USER' && report.status === 'RESOLVED') {
       try {
         await fetch('/api/admin/unsuspend-user', {
@@ -137,14 +137,77 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
   }
   const filtered = filter === 'ALL' ? reports : reports.filter((r: any) => r.status === filter)
 
+  // ── Shared action buttons ─────────────────────────────────────
+  const ActionButtons = ({ r, compact = false }: { r: any; compact?: boolean }) => {
+    const isActive = r.status === 'OPEN' || r.status === 'REVIEWING'
+    const listingRemoved = r.target_type === 'LISTING' && r.listing_is_active === false
+    const cls = compact ? 'text-xs h-8' : 'text-sm h-9'
+
+    return (
+      <div className={`flex ${compact ? 'flex-col gap-1' : 'flex-wrap gap-2'}`}>
+        <Button variant="outline" size="sm" onClick={() => openDetails(r)}
+          className={`${cls} border-navy/20 text-navy hover:bg-navy/5 ${compact ? 'w-full justify-start' : ''}`}>
+          <Eye className="w-3.5 h-3.5 mr-1.5" /> Details
+        </Button>
+
+        {isActive && (
+          <>
+            {r.status === 'OPEN' && (
+              <Button variant="outline" size="sm" disabled={loadingId === r.id}
+                onClick={() => updateStatus(r.id, 'REVIEWING')}
+                className={`${cls} text-amber-600 border-amber-300 hover:bg-amber-50 ${compact ? 'w-full justify-start' : ''}`}>
+                <Clock className="w-3.5 h-3.5 mr-1.5" /> Under Review
+              </Button>
+            )}
+            {r.target_type === 'LISTING' && (
+              <Button variant="destructive" size="sm" disabled={loadingId === r.id}
+                onClick={() => handleRemoveListing(r.target_id, r.id)}
+                className={`${cls} ${compact ? 'w-full justify-start' : ''}`}>
+                <Ban className="w-3.5 h-3.5 mr-1.5" /> Block Listing
+              </Button>
+            )}
+            {r.target_type === 'USER' && (
+              <Button variant="destructive" size="sm" disabled={loadingId === r.id}
+                onClick={() => handleSuspend(r.target_id, r.id)}
+                className={`${cls} ${compact ? 'w-full justify-start' : ''}`}>
+                <Ban className="w-3.5 h-3.5 mr-1.5" /> Suspend User
+              </Button>
+            )}
+            <Button variant="outline" size="sm" disabled={loadingId === r.id}
+              onClick={() => updateStatus(r.id, 'DISMISSED')}
+              className={`${cls} text-text-muted ${compact ? 'w-full justify-start' : ''}`}>
+              <X className="w-3.5 h-3.5 mr-1.5" /> Dismiss
+            </Button>
+          </>
+        )}
+
+        {r.target_type === 'LISTING' && listingRemoved && (
+          <Button variant="outline" size="sm" disabled={loadingId === r.id}
+            onClick={() => handleRestoreListing(r.target_id, r.id)}
+            className={`${cls} border-success/40 text-success hover:bg-success/5 ${compact ? 'w-full justify-start' : ''}`}>
+            <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Restore
+          </Button>
+        )}
+
+        {!isActive && (
+          <Button variant="outline" size="sm" disabled={loadingId === r.id}
+            onClick={() => handleReopen(r)}
+            className={`${cls} text-text-muted hover:text-navy ${compact ? 'w-full justify-start' : ''}`}>
+            <RotateCcw className="w-3 h-3 mr-1" /> Reopen
+          </Button>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         {(['OPEN', 'REVIEWING', 'RESOLVED', 'DISMISSED', 'ALL'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-3.5 py-1.5 rounded-full text-sm font-semibold transition-all ${
-              filter === f ? 'bg-navy text-white' : 'bg-white border border-border-light text-text-muted hover:border-navy/30'
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              filter === f ? 'bg-navy text-white shadow-sm' : 'bg-white border border-border-light text-text-muted hover:border-navy/30'
             }`}>
             {f} <span className="ml-1 opacity-70">({counts[f]})</span>
           </button>
@@ -153,14 +216,14 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
 
       {/* Empty state */}
       {filtered.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-2xl border border-border-light text-text-muted">
+        <div className="text-center py-16 bg-white rounded-2xl border border-border-light text-text-muted text-sm">
           No {filter === 'ALL' ? '' : filter.toLowerCase() + ' '}reports found.
         </div>
       )}
 
-      {/* Reports table */}
+      {/* ── Desktop Table ────────────────────────────────── */}
       {filtered.length > 0 && (
-        <div className="bg-white rounded-2xl border border-border-light overflow-hidden">
+        <div className="hidden lg:block bg-white rounded-2xl border border-border-light overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
@@ -179,8 +242,6 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                   const listingRemoved = r.target_type === 'LISTING' && r.listing_is_active === false
                   return (
                     <tr key={r.id} className={`hover:bg-muted-bg/20 transition-colors ${!isActive ? 'opacity-70' : ''}`}>
-
-                      {/* Status */}
                       <td className="p-4">
                         <div className="space-y-1">
                           <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_STYLES[r.status] ?? ''}`}>
@@ -193,14 +254,10 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                           )}
                         </div>
                       </td>
-
-                      {/* Reporter */}
                       <td className="p-4">
                         <div className="font-medium text-sm">{r.reporter?.name ?? '—'}</div>
                         <div className="text-xs text-text-muted">{r.reporter?.email}</div>
                       </td>
-
-                      {/* Reported entity */}
                       <td className="p-4">
                         <div className="flex flex-col gap-1">
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide w-fit ${
@@ -219,80 +276,16 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                           )}
                         </div>
                       </td>
-
-                      {/* Reason */}
                       <td className="p-4">
                         <div className="text-sm font-bold">{REASON_LABELS[r.reason] ?? r.reason}</div>
                         {r.description && <div className="text-xs text-text-muted mt-0.5 line-clamp-2">{r.description}</div>}
                       </td>
-
-                      {/* Date */}
                       <td className="p-4 text-xs text-text-muted whitespace-nowrap">
                         {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}
                       </td>
-
-                      {/* Actions */}
                       <td className="p-4">
                         <div className="flex flex-col gap-1.5 items-end">
-                          {/* Details (always visible) */}
-                          <Button variant="outline" size="sm" onClick={() => openDetails(r)}
-                            className="border-navy/20 text-navy hover:bg-navy/5 w-full justify-start">
-                            <Eye className="w-3.5 h-3.5 mr-1.5" /> Details
-                          </Button>
-
-                          {isActive && (
-                            <>
-                              {/* Under Review */}
-                              {r.status === 'OPEN' && (
-                                <Button variant="outline" size="sm" disabled={loadingId === r.id}
-                                  onClick={() => updateStatus(r.id, 'REVIEWING')}
-                                  className="text-amber-600 border-amber-300 hover:bg-amber-50 w-full justify-start">
-                                  <Clock className="w-3.5 h-3.5 mr-1.5" /> Under Review
-                                </Button>
-                              )}
-
-                              {/* Block / Suspend */}
-                              {r.target_type === 'LISTING' && (
-                                <Button variant="destructive" size="sm" disabled={loadingId === r.id}
-                                  onClick={() => handleRemoveListing(r.target_id, r.id)}
-                                  className="w-full justify-start">
-                                  <Ban className="w-3.5 h-3.5 mr-1.5" /> Block Listing
-                                </Button>
-                              )}
-                              {r.target_type === 'USER' && (
-                                <Button variant="destructive" size="sm" disabled={loadingId === r.id}
-                                  onClick={() => handleSuspend(r.target_id, r.id)}
-                                  className="w-full justify-start">
-                                  <Ban className="w-3.5 h-3.5 mr-1.5" /> Suspend User
-                                </Button>
-                              )}
-
-                              {/* Dismiss */}
-                              <Button variant="outline" size="sm" disabled={loadingId === r.id}
-                                onClick={() => updateStatus(r.id, 'DISMISSED')}
-                                className="w-full justify-start text-text-muted">
-                                <X className="w-3.5 h-3.5 mr-1.5" /> Dismiss
-                              </Button>
-                            </>
-                          )}
-
-                          {/* Resolved: restore listing if removed */}
-                          {r.target_type === 'LISTING' && listingRemoved && (
-                            <Button variant="outline" size="sm" disabled={loadingId === r.id}
-                              onClick={() => handleRestoreListing(r.target_id, r.id)}
-                              className="border-success/40 text-success hover:bg-success/5 w-full justify-start">
-                              <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Restore
-                            </Button>
-                          )}
-
-                          {/* Reopen */}
-                          {!isActive && (
-                            <Button variant="outline" size="sm" disabled={loadingId === r.id}
-                              onClick={() => handleReopen(r)}
-                              className="text-text-muted hover:text-navy w-full justify-start text-xs">
-                              <RotateCcw className="w-3 h-3 mr-1" /> Reopen
-                            </Button>
-                          )}
+                          <ActionButtons r={r} compact />
                         </div>
                       </td>
                     </tr>
@@ -304,23 +297,77 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
         </div>
       )}
 
+      {/* ── Mobile / Tablet Card List ────────────────────── */}
+      {filtered.length > 0 && (
+        <div className="lg:hidden space-y-3">
+          {filtered.map((r: any) => {
+            const isActive = r.status === 'OPEN' || r.status === 'REVIEWING'
+            const listingRemoved = r.target_type === 'LISTING' && r.listing_is_active === false
+            const isExpanded = expandedId === r.id
+
+            return (
+              <div key={r.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${!isActive ? 'opacity-80 border-border-light' : 'border-border-light'}`}>
+                {/* Summary row */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                  className="w-full flex items-start gap-3 p-4 text-left hover:bg-muted-bg/40 transition-colors"
+                >
+                  <div className="shrink-0 pt-0.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_STYLES[r.status] ?? ''}`}>
+                      {r.status}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${
+                        r.target_type === 'LISTING' ? 'bg-navy/10 text-navy' : 'bg-coral/10 text-coral'
+                      }`}>{r.target_type}</span>
+                      <span className="text-xs font-semibold text-navy truncate">{r.target_label}</span>
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      {REASON_LABELS[r.reason] ?? r.reason}
+                      {r.description && <span className="ml-1 opacity-70">· {r.description}</span>}
+                    </p>
+                    <p className="text-[10px] text-text-muted mt-1">
+                      By {r.reporter?.name ?? '—'} · {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </p>
+                    {listingRemoved && (
+                      <span className="text-[9px] font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded-full inline-block mt-1">Listing Removed</span>
+                    )}
+                  </div>
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-text-muted shrink-0 mt-0.5" /> : <ChevronDown className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />}
+                </button>
+
+                {/* Expanded actions */}
+                {isExpanded && (
+                  <div className="border-t border-border-light bg-muted-bg/30 p-4">
+                    <ActionButtons r={r} compact />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* ── Details Slide-Over Panel ── */}
       {detailsPanel && (
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-navy/50 backdrop-blur-sm" onClick={() => setDetailsPanel(null)} />
 
-          {/* Panel */}
-          <div className="relative w-full max-w-2xl bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
+          {/* Panel — full screen on mobile, 2xl on desktop */}
+          <div className="relative w-full sm:max-w-lg lg:max-w-2xl bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
             {/* Panel header */}
-            <div className="sticky top-0 bg-white border-b border-border-light px-6 py-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white border-b border-border-light px-4 sm:px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide ${
                   detailsPanel.report.target_type === 'LISTING' ? 'bg-navy/10 text-navy' : 'bg-coral/10 text-coral'
                 }`}>
                   {detailsPanel.report.target_type}
                 </div>
-                <h2 className="font-bold text-navy text-lg">
+                <h2 className="font-bold text-navy text-base">
                   {detailsPanel.report.target_type === 'LISTING' ? 'Listing Details' : 'User Details'}
                 </h2>
               </div>
@@ -339,7 +386,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
 
             {/* Content */}
             {!detailsLoading && detailsPanel.data && (
-              <div className="p-6 space-y-6 flex-1">
+              <div className="p-4 sm:p-6 space-y-6 flex-1">
                 {/* ── LISTING DETAILS ── */}
                 {detailsPanel.report.target_type === 'LISTING' && (() => {
                   const { listing, otherListings } = detailsPanel.data
@@ -355,7 +402,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                           </h3>
                           <div className="flex gap-2 overflow-x-auto pb-2">
                             {images.map((img: any, i: number) => (
-                              <div key={i} className={`relative w-40 h-28 rounded-xl overflow-hidden shrink-0 border-2 ${img.is_primary ? 'border-coral' : 'border-border-light'}`}>
+                              <div key={i} className={`relative w-36 h-24 rounded-xl overflow-hidden shrink-0 border-2 ${img.is_primary ? 'border-coral' : 'border-border-light'}`}>
                                 <img src={img.url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 {img.is_primary && (
                                   <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-coral text-white px-1.5 py-0.5 rounded-full">Cover</span>
@@ -368,7 +415,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
 
                       {/* Listing info */}
                       <div className="bg-muted-bg rounded-2xl p-4 space-y-3">
-                        <h3 className="font-bold text-navy text-lg">{listing.title}</h3>
+                        <h3 className="font-bold text-navy text-base">{listing.title}</h3>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <Info label="Type" value={FLAT_LABELS[listing.room_type] ?? listing.room_type} />
                           <Info label="Rent" value={`₹${listing.rent?.toLocaleString('en-IN')}/mo`} />
@@ -392,7 +439,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                           <UserCircle2 className="w-3.5 h-3.5" /> Listed By
                         </h3>
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-14 h-14 rounded-xl overflow-hidden bg-navy/10 shrink-0 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-navy/10 shrink-0 flex items-center justify-center">
                             {poster.avatar_url
                               ? <img src={poster.avatar_url} alt="" className="w-full h-full object-cover" />
                               : <span className="text-xl font-black text-navy">{(poster.name || '?')[0]?.toUpperCase()}</span>
@@ -412,7 +459,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                         </div>
                       </div>
 
-                      {/* Other listings by same user */}
+                      {/* Other listings */}
                       {otherListings?.length > 0 && (
                         <div>
                           <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-3 flex items-center gap-1.5">
@@ -447,16 +494,16 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                   return (
                     <>
                       {/* Profile card */}
-                      <div className="bg-muted-bg rounded-2xl p-5 flex items-center gap-4">
-                        <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-border-light shrink-0 flex items-center justify-center">
+                      <div className="bg-muted-bg rounded-2xl p-4 flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-border-light shrink-0 flex items-center justify-center">
                           {userProfile.avatar_url
                             ? <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover" />
-                            : <span className="text-3xl font-black text-navy">{(userProfile.name || '?')[0]?.toUpperCase()}</span>
+                            : <span className="text-2xl font-black text-navy">{(userProfile.name || '?')[0]?.toUpperCase()}</span>
                           }
                         </div>
-                        <div className="space-y-1">
-                          <div className="font-bold text-navy text-lg">{userProfile.name}</div>
-                          <div className="text-sm text-text-muted flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{userProfile.email}</div>
+                        <div className="space-y-1 min-w-0">
+                          <div className="font-bold text-navy text-base truncate">{userProfile.name}</div>
+                          <div className="text-xs text-text-muted flex items-center gap-1"><Mail className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{userProfile.email}</span></div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${userProfile.verified_status === 'VERIFIED' ? 'bg-success/10 text-success' : 'bg-amber-100 text-amber-700'}`}>
                               {userProfile.verified_status}
@@ -464,12 +511,11 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${userProfile.is_active === false ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
                               {userProfile.is_active === false ? 'Suspended' : 'Active'}
                             </span>
-                            <span className="text-xs font-semibold text-text-muted capitalize">{userProfile.role?.toLowerCase()}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* User info grid */}
+                      {/* Info grid */}
                       <div className="grid grid-cols-2 gap-3">
                         <Info label="Gender" value={userProfile.gender?.toLowerCase() ?? '—'} />
                         <Info label="Branch" value={userProfile.branch ?? '—'} />
@@ -481,17 +527,6 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                           </div>
                         )}
                       </div>
-
-                      {/* User ID proof */}
-                      {userProfile.student_id_path && (
-                        <div>
-                          <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                            <Shield className="w-3.5 h-3.5" /> Student ID
-                          </h3>
-                          <img src={userProfile.student_id_path} alt="Student ID"
-                            className="rounded-xl border border-border-light max-h-48 object-cover" />
-                        </div>
-                      )}
 
                       {/* Their listings */}
                       {userListings?.length > 0 && (
@@ -505,8 +540,8 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
                               return (
                                 <a key={l.id} href={`/listings/${l.id}`} target="_blank" rel="noopener noreferrer"
                                   className="flex items-center gap-3 p-3 rounded-xl border border-border-light hover:border-coral/40 hover:bg-coral/[0.02] transition-all group">
-                                  <div className="w-12 h-10 rounded-lg overflow-hidden bg-muted-bg shrink-0">
-                                    {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 m-auto text-text-muted mt-2" />}
+                                  <div className="w-10 h-9 rounded-lg overflow-hidden bg-muted-bg shrink-0">
+                                    {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="w-4 h-4 m-auto text-text-muted mt-2" />}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="font-semibold text-sm text-navy group-hover:text-coral transition-colors truncate">{l.title}</div>

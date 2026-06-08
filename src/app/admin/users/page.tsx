@@ -10,8 +10,8 @@ export default async function UsersAdminPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div>
-      <h1 className="text-3xl font-black text-navy mb-8">User Management</h1>
+    <div className="space-y-5">
+      <h1 className="text-xl md:text-2xl font-black text-navy">User Management</h1>
       <UsersClient initialUsers={users || []} />
     </div>
   )

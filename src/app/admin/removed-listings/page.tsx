@@ -17,8 +17,8 @@ export default async function RemovedListingsPage() {
   if (error) console.error('removed-listings fetch error:', error)
 
   return (
-    <div>
-      <h1 className="text-3xl font-black text-navy mb-8">Removed Listings</h1>
+    <div className="space-y-5">
+      <h1 className="text-xl md:text-2xl font-black text-navy">Removed Listings</h1>
       <RemovedListingsClient initialListings={listings || []} />
     </div>
   )

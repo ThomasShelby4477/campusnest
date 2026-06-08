@@ -53,14 +53,14 @@ export default async function ReportsAdminPage() {
   }))
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-black text-navy">Reports Queue</h1>
-        <div className="flex gap-2 text-sm">
-          <span className="px-3 py-1 rounded-full bg-danger/10 text-danger font-semibold">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-xl md:text-2xl font-black text-navy">Reports Queue</h1>
+        <div className="flex gap-2 text-xs ml-auto">
+          <span className="px-2.5 py-1 rounded-full bg-danger/10 text-danger font-semibold">
             {enrichedReports.filter(r => r.status === 'OPEN').length} Open
           </span>
-          <span className="px-3 py-1 rounded-full bg-muted-bg text-text-muted font-semibold">
+          <span className="px-2.5 py-1 rounded-full bg-muted-bg text-text-muted font-semibold">
             {enrichedReports.filter(r => r.status === 'REVIEWING').length} Reviewing
           </span>
         </div>

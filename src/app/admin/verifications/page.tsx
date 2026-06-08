@@ -11,8 +11,8 @@ export default async function VerificationsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div>
-      <h1 className="text-3xl font-black text-navy mb-8">Verification Queue</h1>
+    <div className="space-y-5">
+      <h1 className="text-xl md:text-2xl font-black text-navy">Verification Queue</h1>
       <VerificationsClient initialProfiles={profiles || []} />
     </div>
   )

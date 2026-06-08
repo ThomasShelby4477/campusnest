@@ -15,8 +15,8 @@ export default async function ListingsAdminPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div>
-      <h1 className="text-3xl font-black text-navy mb-8">Listings Moderation</h1>
+    <div className="space-y-5">
+      <h1 className="text-xl md:text-2xl font-black text-navy">Listings Moderation</h1>
       <ListingsClient initialListings={listings || []} />
     </div>
   )

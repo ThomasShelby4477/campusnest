@@ -79,7 +79,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   }
 
   // ── Hard gender access check ──────────────────────────────
-  // Authenticated users (non-admins) can only view listings that match their gender or are ANY.
+  // Authenticated users can only view listings that match their gender or are ANY.
   // Unauthenticated visitors are not restricted (they can't contact anyway).
   const genderAllowed = listing.gender_allowed // 'MALE' | 'FEMALE' | 'ANY'
   const genderBlocked =

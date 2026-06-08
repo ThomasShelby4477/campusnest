@@ -40,7 +40,7 @@ export async function GET() {
     .eq('profiles.is_active', true)
 
   // Hard gender filter — same rule as search page:
-  // MALE users see MALE + ANY; FEMALE users see FEMALE + ANY; guests see all
+  // MALE users see MALE + ANY; FEMALE users see FEMALE + ANY; guests see all. ADMINs see all.
   if (userRole !== 'ADMIN') {
     if (userGender === 'MALE') {
       query = query.in('gender_allowed', ['MALE', 'ANY'])

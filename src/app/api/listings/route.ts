@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
     if (food === 'true') query = query.eq('food_available', true)
     if (moveIn) query = query.gte('available_from', moveIn)
 
-    // Hard gender enforcement — authenticated users (non-admins) only see matching listings
+    // Hard gender enforcement — authenticated users only see matching listings (admins bypass)
     if (callerRole !== 'ADMIN') {
       if (callerGender === 'MALE') {
         query = query.in('gender_allowed', ['MALE', 'ANY'])

@@ -13,11 +13,13 @@ export function PhotoGallery({ images }: { images: { url: string }[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="secondary" className="absolute bottom-4 right-4 z-10 flex items-center gap-2 bg-white/90 hover:bg-white text-navy font-semibold shadow-md">
-          <Grid2X2 className="w-4 h-4" />
-          Show all photos
-        </Button>
+      <DialogTrigger 
+        render={
+          <Button variant="secondary" className="absolute bottom-4 right-4 z-10 flex items-center gap-2 bg-white/90 hover:bg-white text-navy font-semibold shadow-md" />
+        }
+      >
+        <Grid2X2 className="w-4 h-4" />
+        Show all photos
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-black/95 border-none text-white [&>button]:text-white">
         <DialogTitle className="sr-only">Property Photos Gallery</DialogTitle>

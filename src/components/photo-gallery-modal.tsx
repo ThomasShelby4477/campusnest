@@ -35,6 +35,13 @@ export function PhotoGalleryModal({ photos, initialIndex = 0, onClose }: PhotoGa
   const touchStart = useRef<{ x: number; y: number; dist: number } | null>(null)
   const zoomAtTouchStart = useRef(1)
   const panAtTouchStart = useRef({ x: 0, y: 0 })
+  // Refs that mirror state so DOM event listeners (non-reactive closures) can read current values
+  const zoomRef = useRef(1)
+  const panRef = useRef({ x: 0, y: 0 })
+
+  // Keep refs in sync with state
+  useEffect(() => { zoomRef.current = zoom }, [zoom])
+  useEffect(() => { panRef.current = pan }, [pan])
 
   // ── helpers ───────────────────────────────────────────────
   const clampPan = useCallback((x: number, y: number, currentZoom: number) => {
@@ -97,6 +104,102 @@ export function PhotoGalleryModal({ photos, initialIndex = 0, onClose }: PhotoGa
     return () => { document.body.style.overflow = '' }
   }, [])
 
+  // ── Non-passive touch listeners (required to call preventDefault on pinch) ──
+  // React registers synthetic touch events as *passive*, meaning e.preventDefault()
+  // is silently ignored and the browser still fires its native pinch-zoom.
+  // We attach real DOM listeners with { passive: false } to intercept them first.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, dist: 0 }
+        panAtTouchStart.current = { x: pan.x, y: pan.y }
+      } else if (e.touches.length === 2) {
+        e.preventDefault()
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        touchStart.current = { x: 0, y: 0, dist }
+        zoomAtTouchStart.current = zoomRef.current
+        panAtTouchStart.current = { x: panRef.current.x, y: panRef.current.y }
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStart.current) return
+      // Always prevent default to block native browser pinch-zoom and scroll
+      e.preventDefault()
+
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const scale = dist / touchStart.current.dist
+        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomAtTouchStart.current * scale))
+        setZoom(newZoom)
+        if (newZoom <= 1) setPan({ x: 0, y: 0 })
+        return
+      }
+
+      if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX - touchStart.current.x
+        const dy = e.touches[0].clientY - touchStart.current.y
+        if (zoomRef.current > 1) {
+          const clamped = clampPan(
+            panAtTouchStart.current.x + dx,
+            panAtTouchStart.current.y + dy,
+            zoomRef.current,
+          )
+          setPan(clamped)
+        }
+      }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStart.current || e.touches.length > 0) return
+      const dx = e.changedTouches[0].clientX - touchStart.current.x
+      const now = Date.now()
+
+      // Double-tap to zoom
+      if (now - lastTap.current < 300) {
+        if (zoomRef.current > 1) {
+          setZoom(1)
+          setPan({ x: 0, y: 0 })
+        } else {
+          setZoom(2.5)
+        }
+        lastTap.current = 0 // reset so triple-tap doesn't double-fire
+      } else {
+        lastTap.current = now
+        // Swipe navigation (only when not zoomed)
+        if (zoomRef.current <= 1 && Math.abs(dx) > 50) {
+          setCurrentIndex((i) => {
+            const next = (i + (dx > 0 ? -1 : 1) + photos.length) % photos.length
+            return next
+          })
+          setZoom(1)
+          setPan({ x: 0, y: 0 })
+          setIsLoaded(false)
+        }
+      }
+      touchStart.current = null
+    }
+
+    // { passive: false } is the critical flag — without it, preventDefault() is a no-op
+    el.addEventListener('touchstart', handleTouchStart, { passive: false })
+    el.addEventListener('touchmove', handleTouchMove, { passive: false })
+    el.addEventListener('touchend', handleTouchEnd, { passive: false })
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart)
+      el.removeEventListener('touchmove', handleTouchMove)
+      el.removeEventListener('touchend', handleTouchEnd)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clampPan, photos.length])
+
   // ── mouse pan ─────────────────────────────────────────────
   const onMouseDown = (e: React.MouseEvent) => {
     if (zoom <= 1) return
@@ -127,75 +230,9 @@ export function PhotoGalleryModal({ photos, initialIndex = 0, onClose }: PhotoGa
     })
   }
 
-  // ── touch gestures (swipe + pinch zoom) ───────────────────
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, dist: 0 }
-      panAtTouchStart.current = { ...pan }
-    } else if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX
-      const dy = e.touches[0].clientY - e.touches[1].clientY
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      touchStart.current = { x: 0, y: 0, dist }
-      zoomAtTouchStart.current = zoom
-      panAtTouchStart.current = { ...pan }
-    }
-  }
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart.current) return
-    e.preventDefault()
-
-    if (e.touches.length === 2) {
-      // Pinch zoom
-      const dx = e.touches[0].clientX - e.touches[1].clientX
-      const dy = e.touches[0].clientY - e.touches[1].clientY
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      const scale = dist / touchStart.current.dist
-      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomAtTouchStart.current * scale))
-      setZoom(newZoom)
-      if (newZoom === 1) setPan({ x: 0, y: 0 })
-      return
-    }
-
-    if (e.touches.length === 1 && touchStart.current) {
-      const dx = e.touches[0].clientX - touchStart.current.x
-      const dy = e.touches[0].clientY - touchStart.current.y
-
-      if (zoom > 1) {
-        // Pan
-        const clamped = clampPan(panAtTouchStart.current.x + dx, panAtTouchStart.current.y + dy, zoom)
-        setPan(clamped)
-      }
-    }
-  }
-
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart.current || e.touches.length > 0) return
-    const dx = e.changedTouches[0].clientX - touchStart.current.x
-
-    // Swipe only if not zoomed in
-    if (zoom <= 1 && Math.abs(dx) > 50) {
-      navigate(dx > 0 ? -1 : 1)
-    }
-    touchStart.current = null
-  }
-
-  // ── double-tap zoom ───────────────────────────────────────
+  // Touch gestures are handled via non-passive DOM listeners in the useEffect above.
+  // (React synthetic touch events are passive and cannot call preventDefault)
   const lastTap = useRef(0)
-  const onTouchEndDoubleTap = (e: React.TouchEvent) => {
-    const now = Date.now()
-    if (now - lastTap.current < 300) {
-      if (zoom > 1) {
-        setZoom(1)
-        setPan({ x: 0, y: 0 })
-      } else {
-        setZoom(2.5)
-      }
-    }
-    lastTap.current = now
-    onTouchEnd(e)
-  }
 
   const currentPhoto = photos[currentIndex]
 
@@ -355,10 +392,13 @@ export function PhotoGalleryModal({ photos, initialIndex = 0, onClose }: PhotoGa
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEndDoubleTap}
-        style={{ cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
+        style={{
+          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
+          // Disable ALL native touch handling on this element.
+          // This prevents iOS/Android from intercepting pinch-to-zoom or scroll
+          // before our non-passive listener gets a chance to call preventDefault().
+          touchAction: 'none',
+        }}
       >
         {/* Loading shimmer */}
         {!isLoaded && (

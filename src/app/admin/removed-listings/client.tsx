@@ -105,7 +105,7 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
         {/* Filters row */}
         <div className="flex flex-wrap gap-2 items-center">
           {/* Room type */}
-          <Select value={roomType} onValueChange={v => setRoomType(v)}>
+          <Select value={roomType} onValueChange={v => setRoomType(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <Home className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Room Type" />
@@ -117,7 +117,7 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
           </Select>
 
           {/* Sort */}
-          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+          <Select value={sort} onValueChange={v => setSort((v ?? 'removed_desc') as SortKey)}>
             <SelectTrigger className="h-9 w-[160px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Sort" />

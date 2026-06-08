@@ -148,7 +148,7 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
         {/* Filter row */}
         <div className="flex flex-wrap gap-2">
           {/* Year */}
-          <Select value={yearFilter} onValueChange={v => setYearFilter(v)}>
+          <Select value={yearFilter} onValueChange={v => setYearFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[110px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Year" />
@@ -163,7 +163,7 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
           </Select>
 
           {/* Gender */}
-          <Select value={genderFilter} onValueChange={v => setGenderFilter(v)}>
+          <Select value={genderFilter} onValueChange={v => setGenderFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[110px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <User className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Gender" />
@@ -177,7 +177,7 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
           </Select>
 
           {/* Role */}
-          <Select value={roleFilter} onValueChange={v => setRoleFilter(v)}>
+          <Select value={roleFilter} onValueChange={v => setRoleFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[110px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <Shield className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Role" />
@@ -190,7 +190,7 @@ export function VerificationsClient({ initialProfiles }: { initialProfiles: any[
           </Select>
 
           {/* Sort */}
-          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+          <Select value={sort} onValueChange={v => setSort((v ?? 'newest') as SortKey)}>
             <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Sort" />

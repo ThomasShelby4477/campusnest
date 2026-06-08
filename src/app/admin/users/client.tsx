@@ -110,7 +110,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
         {/* Filters row */}
         <div className="flex flex-wrap gap-2 items-center">
           {/* Role */}
-          <Select value={roleFilter} onValueChange={v => setRoleFilter(v)}>
+          <Select value={roleFilter} onValueChange={v => setRoleFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[120px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <Shield className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Role" />
@@ -124,7 +124,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
           </Select>
 
           {/* Verified status */}
-          <Select value={verifiedFilter} onValueChange={v => setVerifiedFilter(v)}>
+          <Select value={verifiedFilter} onValueChange={v => setVerifiedFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <CheckCircle className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Verified" />
@@ -138,7 +138,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
           </Select>
 
           {/* Active/Banned */}
-          <Select value={activeFilter} onValueChange={v => setActiveFilter(v)}>
+          <Select value={activeFilter} onValueChange={v => setActiveFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[120px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <User className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Status" />
@@ -151,7 +151,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
           </Select>
 
           {/* Sort */}
-          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+          <Select value={sort} onValueChange={v => setSort((v ?? 'newest') as SortKey)}>
             <SelectTrigger className="h-9 w-[140px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Sort" />

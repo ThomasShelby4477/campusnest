@@ -130,7 +130,7 @@ export function ListingsClient({ initialListings }: { initialListings: any[] }) 
         {/* Filters row */}
         <div className="flex flex-wrap gap-2 items-center">
           {/* Room type */}
-          <Select value={roomType} onValueChange={v => setRoomType(v)}>
+          <Select value={roomType} onValueChange={v => setRoomType(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <Home className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Room Type" />
@@ -142,7 +142,7 @@ export function ListingsClient({ initialListings }: { initialListings: any[] }) 
           </Select>
 
           {/* Gender */}
-          <Select value={genderFilter} onValueChange={v => setGenderFilter(v)}>
+          <Select value={genderFilter} onValueChange={v => setGenderFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[110px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <User className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Gender" />
@@ -156,7 +156,7 @@ export function ListingsClient({ initialListings }: { initialListings: any[] }) 
           </Select>
 
           {/* Sort */}
-          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+          <Select value={sort} onValueChange={v => setSort((v ?? 'newest') as SortKey)}>
             <SelectTrigger className="h-9 w-[140px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Sort" />

@@ -270,7 +270,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
         {/* Filters row */}
         <div className="flex flex-wrap gap-2 items-center">
           {/* Reason */}
-          <Select value={reasonFilter} onValueChange={v => setReasonFilter(v)}>
+          <Select value={reasonFilter} onValueChange={v => setReasonFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[140px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Reason" />
@@ -287,7 +287,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
           </Select>
 
           {/* Target type */}
-          <Select value={typeFilter} onValueChange={v => setTypeFilter(v)}>
+          <Select value={typeFilter} onValueChange={v => setTypeFilter(v ?? 'ALL')}>
             <SelectTrigger className="h-9 w-[120px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -299,7 +299,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
           </Select>
 
           {/* Sort */}
-          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+          <Select value={sort} onValueChange={v => setSort((v ?? 'newest') as SortKey)}>
             <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
               <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
               <SelectValue placeholder="Sort" />

@@ -69,12 +69,13 @@ export default function ProfilePage() {
 
   const handleLogout = async () => {
     try {
-      // 1. Clear server-side HttpOnly session cookies
+      // 1. Revoke server-side session + clear HttpOnly auth cookies
       await fetch('/api/auth/signout', { method: 'POST' })
     } catch { /* best-effort */ }
-    // 2. Clear browser client state (in-memory session, localStorage)
+    // 2. Clear browser client session (in-memory / localStorage)
     await supabase.auth.signOut()
-    // 3. Wipe Zustand auth store
+    // 3. Wipe Zustand auth store — supabase.auth.signOut() fires SIGNED_OUT
+    //    which also calls clearUser(), but we do it here explicitly for immediacy
     setUser(null)
     // 4. Full page navigation — destroys all client React state/cache
     window.location.href = '/login'

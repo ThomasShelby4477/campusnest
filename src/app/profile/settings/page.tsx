@@ -51,9 +51,10 @@ export default function SettingsPage() {
         return
       }
 
-      // Full sign-out: server cookies + client state
+      // Full sign-out: server cookies + client state + Zustand store
       try { await fetch('/api/auth/signout', { method: 'POST' }) } catch { /* best-effort */ }
       await supabase.auth.signOut()
+      // Explicitly clear store (SIGNED_OUT event also triggers clearUser, but do it here for immediacy)
       toast.success('Account deleted')
       window.location.href = '/'
     }

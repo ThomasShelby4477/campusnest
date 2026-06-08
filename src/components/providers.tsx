@@ -43,6 +43,8 @@ function AuthProvider({ children }: { children: ReactNode }) {
             const { profile } = await res.json()
             // If the profile came back but is suspended, kick them out immediately
             if (profile?.is_active === false) {
+              // Must call server-side signout first to clear HttpOnly cookies
+              try { await fetch('/api/auth/signout', { method: 'POST' }) } catch { /* best-effort */ }
               await supabase.auth.signOut()
               clearUser()
               toast.error('Your account has been suspended. For disputes, contact email@campusnest.com', {
@@ -57,10 +59,12 @@ function AuthProvider({ children }: { children: ReactNode }) {
         } catch { /* ignore */ }
       } else if (event === 'SIGNED_OUT') {
         clearUser()
-        // Only redirect if not already on an auth/public page
+        // Only redirect to /login if not already navigating to a dedicated page
+        // (e.g., /suspended or /login itself — avoids racing with suspension redirect)
+        const dest = window.location.pathname
         const publicPaths = ['/login', '/signup', '/suspended', '/']
         const onPublicPath = publicPaths.some(p =>
-          window.location.pathname === p || window.location.pathname.startsWith('/listings/')
+          dest === p || dest.startsWith('/listings/')
         )
         if (!onPublicPath) {
           window.location.href = '/login'

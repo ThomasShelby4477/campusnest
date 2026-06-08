@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Ban, Check, Eye, ExternalLink, Clock, RotateCcw } from 'lucide-react'
@@ -26,13 +25,16 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
   const [reports, setReports] = useState(initialReports)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED'>('OPEN')
-  const supabase = createClient()
 
-  // ── Status update ────────────────────────────────────────────
+  // ── Status update (via server API to bypass RLS) ────────────
   const updateStatus = async (reportId: string, status: 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED') => {
     setLoadingId(reportId)
-    const { error } = await supabase.from('reports').update({ status }).eq('id', reportId)
-    if (error) {
+    const res = await fetch('/api/admin/reports', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportId, status }),
+    })
+    if (!res.ok) {
       toast.error('Failed to update report')
     } else {
       setReports((prev: any[]) => prev.map(r => r.id === reportId ? { ...r, status } : r))

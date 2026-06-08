@@ -59,9 +59,12 @@ function LoginContent() {
 
     const data = await res.json()
 
-    // Suspended account — redirect to the suspension page immediately
+    // Suspended account — show a clear toast then redirect to the suspension page
     if (res.status === 403 && data.suspended) {
-      window.location.href = '/suspended'
+      toast.error('Your account has been suspended. For disputes, contact email@campusnest.com', {
+        duration: 5000,
+      })
+      setTimeout(() => { window.location.href = '/suspended' }, 800)
       return
     }
 

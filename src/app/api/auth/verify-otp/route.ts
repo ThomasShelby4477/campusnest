@@ -78,7 +78,10 @@ export async function POST(req: Request) {
       await supabaseAdmin.auth.admin.signOut(data.user.id, 'global')
     } catch { /* best-effort */ }
     return NextResponse.json(
-      { error: 'Your account has been suspended. If you believe this is a mistake, contact email@campusnest.com' },
+      {
+        suspended: true,
+        error: 'Your account has been suspended due to a violation of our community guidelines. If you believe this is a mistake, please contact us at email@campusnest.com',
+      },
       { status: 403 }
     )
   }

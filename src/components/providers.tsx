@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react'
 import { Toaster } from 'sonner'
+import { toast } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -44,7 +45,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
             if (profile?.is_active === false) {
               await supabase.auth.signOut()
               clearUser()
-              window.location.href = '/suspended'
+              toast.error('Your account has been suspended. For disputes, contact email@campusnest.com', {
+                duration: 6000,
+                id: 'account-suspended',
+              })
+              setTimeout(() => { window.location.href = '/suspended' }, 800)
               return
             }
             setUser(profile as Profile | null)
@@ -90,7 +95,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
               try { await fetch('/api/auth/signout', { method: 'POST' }) } catch { /* best-effort */ }
               await supabase.auth.signOut()
               clearUser()
-              window.location.href = '/suspended'
+              toast.error('Your account has been suspended. For disputes, contact email@campusnest.com', {
+                duration: 6000,
+                id: 'account-suspended',
+              })
+              setTimeout(() => { window.location.href = '/suspended' }, 800)
             }
           }
         )
@@ -118,7 +127,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
             try { await fetch('/api/auth/signout', { method: 'POST' }) } catch { /* best-effort */ }
             await supabase.auth.signOut()
             clearUser()
-            window.location.href = '/suspended'
+            toast.error('Your account has been suspended. For disputes, contact email@campusnest.com', {
+              duration: 6000,
+              id: 'account-suspended',
+            })
+            setTimeout(() => { window.location.href = '/suspended' }, 800)
           }
         }
       } catch { /* ignore network errors */ }

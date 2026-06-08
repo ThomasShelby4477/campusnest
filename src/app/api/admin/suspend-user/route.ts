@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { sendEmail, accountSuspendedEmail } from '@/lib/email'
 
 const bodySchema = z.object({
   userId: z.string().uuid(),
@@ -33,6 +34,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot suspend yourself' }, { status: 400 })
     }
 
+    // Fetch user info before suspension (for the notification email)
+    const { data: targetProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('name, email')
+      .eq('id', userId)
+      .single()
+
     // 1. Mark profile as inactive
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -61,6 +69,16 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.auth.admin.signOut(userId, 'global')
     } catch (signOutErr) {
       console.warn('Session sign-out failed (non-fatal):', signOutErr)
+    }
+
+    // 4. Send suspension notification email (best-effort — never fail the request)
+    if (targetProfile?.email) {
+      try {
+        const { subject, html } = accountSuspendedEmail(targetProfile.name || 'User')
+        await sendEmail({ to: targetProfile.email, subject, html })
+      } catch (emailErr) {
+        console.warn('Suspension email failed (non-fatal):', emailErr)
+      }
     }
 
     return NextResponse.json({ success: true })

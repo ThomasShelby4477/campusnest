@@ -39,6 +39,9 @@ export async function POST() {
       }
     }
 
+    // Clear the suspension-check cache cookie too
+    response.cookies.set('_san', '', { maxAge: 0, path: '/', httpOnly: true, sameSite: 'lax' })
+
     return response
   } catch (err) {
     console.error('Sign out error:', err)

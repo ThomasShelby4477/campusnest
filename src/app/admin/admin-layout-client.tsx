@@ -14,14 +14,15 @@ const navItems = [
   { label: 'Removed',       href: '/admin/removed-listings', icon: Trash2 },
 ]
 
+// Bottom nav height used to push content clear of it on mobile
+const BOTTOM_NAV_H = 60 // px — keep in sync with the nav element
+
 export function AdminLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
-  // Dismiss on Escape key
   useEffect(() => {
     if (!sidebarOpen) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false) }
@@ -32,23 +33,21 @@ export function AdminLayoutClient({ children }: { children: ReactNode }) {
   const currentLabel = navItems.find(n => n.href === pathname)?.label ?? 'Admin'
 
   return (
-    /*
-     * Layout scaffold — all heights are explicit so the inner <main>
-     * is the ONLY scrolling element.  Nothing on the body scrolls.
-     *
-     * Mobile stack  (flex-col, full viewport):
-     *   [top bar  — 56px, shrink-0]
-     *   [content  — flex-1, overflow-y-auto]
-     *   [bottom nav — auto height, shrink-0]
-     *
-     * Desktop (flex-row inside the middle row):
-     *   [sidebar — 256px, fixed height, shrink-0]
-     *   [main    — flex-1, overflow-y-auto]
-     */
-    <div className="flex flex-col h-screen overflow-hidden bg-muted-bg">
+    <>
+      {/*
+       * ── Desktop layout ────────────────────────────────────────
+       * Sidebar: sticky, full-viewport height, scrolls its own nav items
+       * Main:    natural document scroll — no overflow tricks
+       *
+       * ── Mobile layout ─────────────────────────────────────────
+       * Top bar:    fixed at top (z-30)
+       * Sidebar:    slide-in drawer (fixed, z-50)
+       * Bottom nav: fixed at bottom (z-30)
+       * Content:    normal flow, padded top+bottom to clear fixed bars
+       */}
 
-      {/* ── Mobile Top Bar ────────────────────────────────────── */}
-      <header className="md:hidden flex items-center justify-between px-4 bg-navy text-white shrink-0"
+      {/* ── Mobile fixed top bar ─────────────────────────────── */}
+      <header className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-4 bg-navy text-white"
         style={{ height: 56 }}>
         <button
           onClick={() => setSidebarOpen(true)}
@@ -58,98 +57,111 @@ export function AdminLayoutClient({ children }: { children: ReactNode }) {
           <Menu className="w-5 h-5" />
         </button>
         <span className="text-base font-black tracking-tight">Admin Panel</span>
-        {/* Right spacer matches button width so title is centred */}
         <div className="w-9" />
       </header>
 
-      {/* ── Middle row — sidebar + main ──────────────────────── */}
-      <div className="flex flex-1 min-h-0">
+      {/* ── Mobile drawer backdrop ───────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-navy/60 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-        {/* ── Drawer backdrop (mobile) ─────────────────────── */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-navy/60 backdrop-blur-sm md:hidden"
+      {/* ── Sidebar (desktop: sticky column | mobile: drawer) ── */}
+      <aside
+        className={[
+          // Desktop: static column that sticks as page scrolls
+          'md:fixed md:inset-y-0 md:left-0 md:w-64 md:translate-x-0',
+          // Mobile: full-height drawer
+          'fixed inset-y-0 left-0 z-50 w-64',
+          'bg-navy text-white flex flex-col',
+          'transition-transform duration-300 ease-in-out',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        ].join(' ')}
+        style={{ zIndex: sidebarOpen ? 50 : undefined }}
+      >
+        <div className="flex items-center justify-between px-6 h-16 border-b border-white/10 shrink-0">
+          <h2 className="text-xl font-black tracking-tight text-white">Admin Panel</h2>
+          <button
             onClick={() => setSidebarOpen(false)}
-          />
-        )}
+            className="md:hidden w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-        {/* ── Sidebar ──────────────────────────────────────── */}
-        <aside
-          className={[
-            // positioning
-            'fixed md:relative inset-y-0 left-0 z-50 md:z-auto',
-            // size
-            'w-64 shrink-0',
-            // colour
-            'bg-navy text-white flex flex-col',
-            // slide animation
-            'transition-transform duration-300 ease-in-out',
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          ].join(' ')}
-        >
-          {/* Brand header */}
-          <div className="flex items-center justify-between px-6 h-16 border-b border-white/10 shrink-0">
-            <h2 className="text-xl font-black tracking-tight text-white">Admin Panel</h2>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="md:hidden w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {navItems.map(({ label, href, icon: Icon }) => {
+            const active = pathname === href
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={[
+                  'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200',
+                  active
+                    ? 'bg-white text-navy shadow-md shadow-black/10'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white',
+                ].join(' ')}
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                <span className="flex-1">{label}</span>
+                {active && <ChevronRight className="w-4 h-4 opacity-40" />}
+              </Link>
+            )
+          })}
+        </nav>
 
-          {/* Nav */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navItems.map(({ label, href, icon: Icon }) => {
-              const active = pathname === href
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={[
-                    'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200',
-                    active
-                      ? 'bg-white text-navy shadow-md shadow-black/10'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white',
-                  ].join(' ')}
-                >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1">{label}</span>
-                  {active && <ChevronRight className="w-4 h-4 opacity-40" />}
-                </Link>
-              )
-            })}
-          </nav>
+        <div className="px-6 py-4 border-t border-white/10 shrink-0">
+          <p className="text-[11px] text-white/40 font-medium">CampusNest Admin</p>
+        </div>
+      </aside>
 
-          <div className="px-6 py-4 border-t border-white/10 shrink-0">
-            <p className="text-[11px] text-white/40 font-medium">CampusNest Admin</p>
-          </div>
-        </aside>
+      {/* ── Main content area ────────────────────────────────── */}
+      <div
+        className="min-h-screen bg-muted-bg"
+        style={{
+          // Desktop: indent content by sidebar width
+          paddingLeft: undefined,
+        }}
+      >
+        {/* Desktop: offset for sidebar */}
+        <div className="md:pl-64">
 
-        {/* ── Main content ─────────────────────────────────── */}
-        <main className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-
-          {/* Desktop breadcrumb — sticky, never scrolls */}
-          <div className="hidden md:flex items-center gap-2 px-6 h-12 bg-white border-b border-border-light shrink-0">
+          {/* Desktop sticky breadcrumb */}
+          <div className="hidden md:flex sticky top-0 z-20 items-center gap-2 px-6 h-12 bg-white border-b border-border-light">
             <span className="text-xs text-text-muted font-medium">Admin</span>
-            <span className="text-text-muted/40 text-xs">›</span>
+            <span className="text-xs text-text-muted/40">›</span>
             <span className="text-xs font-bold text-navy">{currentLabel}</span>
           </div>
 
-          {/* Scrollable page body */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Extra bottom padding on mobile so the bottom nav never covers content */}
-            <div className="p-4 md:p-6 lg:p-8 pb-8 md:pb-10">
-              {children}
-            </div>
+          {/* Page content
+              - Mobile: top padding = top-bar height; bottom padding = bottom-nav height
+              - Desktop: normal padding, no fixed chrome to avoid */}
+          <div
+            className="p-4 md:p-6 lg:p-8"
+            style={{
+              paddingTop: undefined,
+            }}
+          >
+            {/* Mobile spacer for fixed top bar */}
+            <div className="md:hidden" style={{ height: 56 + 16 }} />
+
+            {children}
+
+            {/* Mobile spacer for fixed bottom nav */}
+            <div className="md:hidden" style={{ height: BOTTOM_NAV_H + 16 }} />
           </div>
 
-        </main>
+        </div>
       </div>
 
-      {/* ── Mobile Bottom Nav ─────────────────────────────────── */}
-      <nav className="md:hidden flex items-stretch bg-white border-t border-border-light shrink-0 z-30"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* ── Mobile fixed bottom nav ──────────────────────────── */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch bg-white border-t border-border-light"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)', minHeight: BOTTOM_NAV_H }}
+      >
         {navItems.map(({ label, href, icon: Icon }) => {
           const active = pathname === href
           return (
@@ -173,7 +185,6 @@ export function AdminLayoutClient({ children }: { children: ReactNode }) {
           )
         })}
       </nav>
-
-    </div>
+    </>
   )
 }

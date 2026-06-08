@@ -5,7 +5,7 @@ import { MapPin, Home, Users, CheckCircle, Wifi, Thermometer, Utensils, Droplets
 import { Button } from '@/components/ui/button'
 import { ListingContactButton } from './contact-button'
 import { BackButton } from './back-button'
-import { PhotoGallery } from './photo-gallery'
+import { ListingHero } from './listing-hero'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,23 +55,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Hero Images */}
-      <div className="relative w-full h-[40vh] sm:h-[50vh] bg-black">
-        <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory">
-          {images.map((img, i) => (
-            <div key={i} className="min-w-full h-full relative snap-center">
-              <Image
-                src={img.url}
-                alt={`Property image ${i + 1}`}
-                fill
-                className="object-cover"
-                priority={i === 0}
-              />
-            </div>
-          ))}
-        </div>
-        <PhotoGallery images={images} />
-      </div>
+      {/* Hero Images — with gallery trigger */}
+      <ListingHero photos={images} title={listing.title} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8">

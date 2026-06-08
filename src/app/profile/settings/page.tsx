@@ -51,9 +51,11 @@ export default function SettingsPage() {
         return
       }
 
+      // Full sign-out: server cookies + client state
+      try { await fetch('/api/auth/signout', { method: 'POST' }) } catch { /* best-effort */ }
       await supabase.auth.signOut()
       toast.success('Account deleted')
-      router.push('/')
+      window.location.href = '/'
     }
   }
 

@@ -68,11 +68,16 @@ export default function ProfilePage() {
   }
 
   const handleLogout = async () => {
-    // Per Supabase docs: call signOut on the browser client.
-    // createBrowserClient (@supabase/ssr) clears auth cookies automatically.
-    // onAuthStateChange('SIGNED_OUT') in providers.tsx then calls setUser(null).
+    try {
+      // 1. Clear server-side HttpOnly session cookies
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch { /* best-effort */ }
+    // 2. Clear browser client state (in-memory session, localStorage)
     await supabase.auth.signOut()
-    router.push('/login')
+    // 3. Wipe Zustand auth store
+    setUser(null)
+    // 4. Full page navigation — destroys all client React state/cache
+    window.location.href = '/login'
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

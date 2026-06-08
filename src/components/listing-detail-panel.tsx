@@ -40,6 +40,22 @@ export function ListingDetailPanel({ listing, currentUserId, initialSaved = fals
     } catch { setIsSaved(!next); toast.error('Failed') }
   }
 
+  const FLAT_LABELS: Record<string, string> = {
+    SINGLE: 'Single Room', '1BHK': '1 BHK', '2BHK': '2 BHK', '3BHK': '3 BHK', PG: 'PG / Hostel', SHARED: 'Shared'
+  }
+  const FURNISHED_LABELS: Record<string, string> = {
+    FURNISHED: 'Fully Furnished', SEMI: 'Semi Furnished', UNFURNISHED: 'Unfurnished'
+  }
+  const GENDER_LABELS: Record<string, string> = {
+    MALE: 'Boys Only', FEMALE: 'Girls Only', ANY: 'Co-ed'
+  }
+  const WATER_LABELS: Record<string, string> = {
+    '24H': '24h Water', TIMED: 'Timed Supply', BOREWELL: 'Borewell'
+  }
+  const OWNER_LABELS: Record<string, string> = {
+    SAME_BUILDING: 'Owner in building', NEARBY: 'Owner nearby', FAR: 'Owner far away'
+  }
+
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
       {/* Image carousel */}
@@ -77,7 +93,9 @@ export function ListingDetailPanel({ listing, currentUserId, initialSaved = fals
 
         {/* Badges */}
         <div className="absolute bottom-3 left-3 flex gap-2">
-          <span className="bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded text-xs font-semibold text-navy">{listing.room_type}</span>
+          <span className="bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded text-xs font-semibold text-navy">
+            {FLAT_LABELS[listing.room_type] ?? listing.room_type}
+          </span>
           {listing.is_verified && (
             <span className="bg-success/90 backdrop-blur-sm text-white px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1">
               <CheckCircle className="w-3 h-3" /> Verified
@@ -106,11 +124,14 @@ export function ListingDetailPanel({ listing, currentUserId, initialSaved = fals
         {/* Tags */}
         <div className="flex flex-wrap gap-2">
           {[
-            listing.furnished,
-            listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed,
-            listing.water_supply,
-            listing.roommates_needed > 1 ? `${listing.roommates_needed} roommates` : '1 person',
-          ].map(tag => tag && (
+            FURNISHED_LABELS[listing.furnished] ?? listing.furnished,
+            GENDER_LABELS[listing.gender_allowed] ?? listing.gender_allowed,
+            WATER_LABELS[listing.water_supply] ?? listing.water_supply,
+            listing.roommates_needed > 1 ? `Needs ${listing.roommates_needed}` : '1 person',
+            listing.persons_staying != null ? `${listing.persons_staying} staying` : null,
+            listing.owner_proximity ? (OWNER_LABELS[listing.owner_proximity] ?? listing.owner_proximity) : null,
+            listing.has_balcony ? '🌿 Balcony' : null,
+          ].filter(Boolean).map(tag => (
             <span key={tag} className="px-2.5 py-1 bg-muted-bg rounded-full text-xs font-medium text-text-primary">{tag}</span>
           ))}
         </div>

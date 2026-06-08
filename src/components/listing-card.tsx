@@ -46,7 +46,15 @@ export function ListingCard({ listing, currentUserId, initialSaved = false, onSe
     }
   }
 
-  const genderLabel = listing.gender_allowed === 'ANY' ? 'Co-ed' : listing.gender_allowed === 'MALE' ? 'Boys' : 'Girls'
+  const FLAT_LABELS: Record<string, string> = {
+    SINGLE: 'Single Room', '1BHK': '1 BHK', '2BHK': '2 BHK', '3BHK': '3 BHK', PG: 'PG', SHARED: 'Shared'
+  }
+  const FURNISHED_LABELS: Record<string, string> = {
+    FURNISHED: 'Furnished', SEMI: 'Semi Furnished', UNFURNISHED: 'Unfurnished'
+  }
+  const genderLabel = listing.gender_allowed === 'MALE' ? 'Boys Only' : listing.gender_allowed === 'FEMALE' ? 'Girls Only' : 'Co-ed'
+  const flatLabel = FLAT_LABELS[listing.room_type] ?? listing.room_type
+  const furnishedLabel = FURNISHED_LABELS[listing.furnished] ?? listing.furnished
 
   const inner = (
     <div className="group flex bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
@@ -77,9 +85,9 @@ export function ListingCard({ listing, currentUserId, initialSaved = false, onSe
       {/* Content */}
       <div className="flex flex-col flex-1 p-3 min-w-0">
         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-          <span className="px-2 py-0.5 bg-navy/10 text-navy text-[11px] font-semibold rounded-full">{listing.room_type}</span>
+          <span className="px-2 py-0.5 bg-navy/10 text-navy text-[11px] font-semibold rounded-full">{flatLabel}</span>
           <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{genderLabel}</span>
-          <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{listing.furnished}</span>
+          <span className="px-2 py-0.5 bg-muted-bg text-text-muted text-[11px] font-medium rounded-full">{furnishedLabel}</span>
         </div>
 
         <h3 className="font-bold text-text-primary text-sm leading-snug line-clamp-2 group-hover:text-coral transition-colors duration-200 mb-1">

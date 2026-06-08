@@ -44,7 +44,6 @@ const FURNISH_OPTIONS: { value: Furnished; label: string; desc: string }[] = [
 const GENDER_OPTIONS: { value: GenderAllowed; label: string; desc: string }[] = [
   { value: 'MALE',   label: 'Boys Only',  desc: 'Male tenants' },
   { value: 'FEMALE', label: 'Girls Only', desc: 'Female tenants' },
-  { value: 'ANY',    label: 'Anyone',     desc: 'All genders welcome' },
 ]
 
 const OWNER_PROXIMITY: { value: OwnerProximity; label: string; desc: string }[] = [
@@ -279,7 +278,7 @@ export function BasicInfoStep({ onNext }: Props) {
             options={GENDER_OPTIONS}
             value={store.gender_allowed}
             onSelect={(v) => store.updateField('gender_allowed', v)}
-            cols={3}
+            cols={2}
           />
         </div>
 

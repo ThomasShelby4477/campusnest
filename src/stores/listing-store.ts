@@ -44,7 +44,7 @@ const initialState: ListingState = {
   deposit: '',
   room_type: '1BHK',
   furnished: 'SEMI',
-  gender_allowed: 'ANY',
+  gender_allowed: 'MALE',
   roommates_needed: 1,
   persons_staying: 0,
   owner_proximity: 'NEARBY',

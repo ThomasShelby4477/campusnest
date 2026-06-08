@@ -17,7 +17,7 @@ const listingSchema = z.object({
   deposit: z.number().int().nonnegative(),
   room_type: z.enum(['SINGLE', 'SHARED', '1BHK', '2BHK', '3BHK', 'PG']),
   furnished: z.enum(['FURNISHED', 'SEMI', 'UNFURNISHED']),
-  gender_allowed: z.enum(['MALE', 'FEMALE', 'ANY']),
+  gender_allowed: z.enum(['MALE', 'FEMALE', 'ANY']).optional(), // server overrides from user profile
   roommates_needed: z.number().int().min(1).default(1),
   // New fields
   persons_staying: z.number().int().min(0).default(0),
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     // Verify user is allowed to post (must be VERIFIED)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('verified_status')
+      .select('verified_status, gender')
       .eq('id', user.id)
       .single()
 
@@ -63,6 +63,15 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // Derive gender_allowed from the poster's own gender.
+    // Male posters → MALE listings only. Female posters → FEMALE listings only.
+    // This is a hard server-side rule — the client cannot override it.
+    const posterGender = profile?.gender as string | null
+    const forcedGenderAllowed: 'MALE' | 'FEMALE' | 'ANY' =
+      posterGender === 'MALE' ? 'MALE' :
+      posterGender === 'FEMALE' ? 'FEMALE' :
+      'ANY' // fallback for edge cases (LANDLORD with no gender set)
 
     // [SECURITY M-4] Rate limit: 5 listings created per hour per user
     const rl = rateLimit(`listings:create:${user.id}`, { limit: 5, windowMs: 60 * 60 * 1000 })
@@ -88,6 +97,7 @@ export async function POST(request: NextRequest) {
       persons_staying,
       owner_proximity,
       has_balcony,
+      gender_allowed: _clientGender, // ignored — server enforces this
       ...coreListingData
     } = result.data
 
@@ -96,6 +106,7 @@ export async function POST(request: NextRequest) {
       .from('listings')
       .insert({
         ...coreListingData,
+        gender_allowed: forcedGenderAllowed, // always set from poster's gender
         available_from: available_from || null,
         poster_id: user.id,
         is_verified: true,
@@ -153,7 +164,19 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const url = request.nextUrl
-    
+
+    // Resolve logged-in user's gender for hard enforcement
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    let callerGender: string | null = null
+    if (authUser) {
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('gender')
+        .eq('id', authUser.id)
+        .single()
+      callerGender = callerProfile?.gender ?? null
+    }
+
     let query = supabase
       .from('listings')
       .select(`
@@ -168,22 +191,30 @@ export async function GET(request: NextRequest) {
     const distance = url.searchParams.get('distance')
     const roomType = url.searchParams.get('roomType')
     const furnished = url.searchParams.get('furnished')
-    const gender = url.searchParams.get('gender')
     const wifi = url.searchParams.get('wifi')
     const ac = url.searchParams.get('ac')
     const food = url.searchParams.get('food')
     const moveIn = url.searchParams.get('moveIn')
-    
+    // 'gender' query param is intentionally IGNORED for authenticated users
+    // — their profile gender is always used instead.
+
     if (minRent) query = query.gte('rent', parseInt(minRent))
     if (maxRent) query = query.lte('rent', parseInt(maxRent))
     if (distance) query = query.lte('distance_from_college', parseFloat(distance))
     if (roomType) query = query.eq('room_type', roomType)
     if (furnished) query = query.eq('furnished', furnished)
-    if (gender) query = query.eq('gender_allowed', gender)
     if (wifi === 'true') query = query.eq('has_wifi', true)
     if (ac === 'true') query = query.eq('has_ac', true)
     if (food === 'true') query = query.eq('food_available', true)
     if (moveIn) query = query.gte('available_from', moveIn)
+
+    // Hard gender enforcement — authenticated users only see matching listings
+    if (callerGender === 'MALE') {
+      query = query.in('gender_allowed', ['MALE', 'ANY'])
+    } else if (callerGender === 'FEMALE') {
+      query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+    }
+    // Unauthenticated guests see all listings
 
     // Pagination
     const page = parseInt(url.searchParams.get('page') || '0')

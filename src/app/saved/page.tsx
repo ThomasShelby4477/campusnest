@@ -14,6 +14,14 @@ export default async function SavedListingsPage() {
     redirect('/login?redirect=/saved')
   }
 
+  // Fetch user's gender for filtering
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('gender')
+    .eq('id', user.id)
+    .single()
+  const userGender = profileData?.gender as string | null
+
   // Fetch saved listings — use FK hint to avoid PGRST201 ambiguous join error
   const { data: savedListings, error } = await supabase
     .from('saved_listings')
@@ -32,7 +40,14 @@ export default async function SavedListingsPage() {
 
   const validListings = savedListings
     ?.map(s => s.listings)
-    .filter((l): l is NonNullable<typeof l> => l != null) || []
+    .filter((l): l is NonNullable<typeof l> => l != null)
+    // Hard gender filter — same rule as search page
+    .filter((l: any) => {
+      if (!userGender) return true // unauthenticated fallback (shouldn't happen here)
+      const ga = l.gender_allowed as string | null
+      if (!ga || ga === 'ANY') return true
+      return ga === userGender
+    }) || []
 
   return (
     <div className="min-h-screen bg-muted-bg py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-20 sm:pb-8">

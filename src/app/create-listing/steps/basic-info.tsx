@@ -7,7 +7,6 @@ import {
   useListingStore,
   type FlatType,
   type Furnished,
-  type GenderAllowed,
   type OwnerProximity,
 } from '@/stores/listing-store'
 import {
@@ -41,10 +40,7 @@ const FURNISH_OPTIONS: { value: Furnished; label: string; desc: string }[] = [
   { value: 'UNFURNISHED', label: 'Unfurnished',     desc: 'No furniture' },
 ]
 
-const GENDER_OPTIONS: { value: GenderAllowed; label: string; desc: string }[] = [
-  { value: 'MALE',   label: 'Boys Only',  desc: 'Male tenants' },
-  { value: 'FEMALE', label: 'Girls Only', desc: 'Female tenants' },
-]
+
 
 const OWNER_PROXIMITY: { value: OwnerProximity; label: string; desc: string }[] = [
   { value: 'SAME_BUILDING', label: 'Same Building', desc: 'Owner lives here' },
@@ -272,15 +268,6 @@ export function BasicInfoStep({ onNext }: Props) {
       <div className="space-y-4">
         <SectionHeader icon={<Users className="w-3.5 h-3.5 text-coral" />} title="Tenant Preferences" />
 
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Gender Allowed</Label>
-          <OptionGrid
-            options={GENDER_OPTIONS}
-            value={store.gender_allowed}
-            onSelect={(v) => store.updateField('gender_allowed', v)}
-            cols={2}
-          />
-        </div>
 
         <CounterRow
           label="Roommates Needed"

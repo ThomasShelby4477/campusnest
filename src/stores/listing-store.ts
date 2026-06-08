@@ -15,7 +15,7 @@ export interface ListingState {
   // flat_type is stored in the DB as room_type (same column, same enum values minus SHARED)
   room_type: FlatType
   furnished: Furnished
-  gender_allowed: GenderAllowed
+  // gender_allowed is removed — server sets it from user's profile gender
   roommates_needed: number
   persons_staying: number        // NEW: how many people currently live there
   owner_proximity: OwnerProximity // NEW: where does the owner live?
@@ -44,7 +44,7 @@ const initialState: ListingState = {
   deposit: '',
   room_type: '1BHK',
   furnished: 'SEMI',
-  gender_allowed: 'MALE',
+  // gender_allowed removed
   roommates_needed: 1,
   persons_staying: 0,
   owner_proximity: 'NEARBY',

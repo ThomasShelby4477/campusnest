@@ -98,7 +98,6 @@ export default function CreateListingPage() {
         deposit: Number(store.deposit),
         room_type: store.room_type,
         furnished: store.furnished,
-        gender_allowed: store.gender_allowed,
         roommates_needed: store.roommates_needed,
         persons_staying: store.persons_staying,
         owner_proximity: store.owner_proximity,

@@ -1,10 +1,88 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Grid2X2, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react'
+
+function ZoomableImage({ src, alt }: { src: string; alt: string }) {
+  const [scale, setScale] = useState(1)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStart = useRef({ x: 0, y: 0 })
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (scale > 1) {
+      setIsDragging(true)
+      dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y }
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (isDragging && scale > 1) {
+      setPosition({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y
+      })
+    }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false)
+    e.currentTarget.releasePointerCapture(e.pointerId)
+  }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    // Only zoom if pressing ctrl/cmd or if we want to allow scrolling to zoom always
+    // Let's allow scrolling to zoom always for convenience in photo viewer
+    const delta = e.deltaY * -0.005
+    const newScale = Math.min(Math.max(1, scale + delta), 5) // max zoom 5x
+    setScale(newScale)
+    if (newScale === 1) setPosition({ x: 0, y: 0 })
+  }
+
+  const handleDoubleClick = () => {
+    if (scale > 1) {
+      setScale(1)
+      setPosition({ x: 0, y: 0 })
+    } else {
+      setScale(2)
+    }
+  }
+
+  return (
+    <div 
+      className="relative w-full h-full overflow-hidden touch-none flex items-center justify-center"
+      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onDoubleClick={handleDoubleClick}
+    >
+      <div
+        className="relative w-full h-full"
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+          cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in'
+        }}
+      >
+        <Image 
+          src={src} 
+          alt={alt} 
+          fill 
+          className="object-contain" 
+          sizes="100vw" 
+          priority 
+          draggable={false} 
+        />
+      </div>
+    </div>
+  )
+}
 
 export function PhotoGallery({ images }: { images: { url: string }[] }) {
   const [open, setOpen] = useState(false)
@@ -86,40 +164,34 @@ export function PhotoGallery({ images }: { images: { url: string }[] }) {
                 <ArrowLeft className="w-6 h-6 transition-transform group-hover:-translate-x-1" />
                 <span className="text-sm font-medium tracking-wide uppercase">Back to grid</span>
               </button>
-              <span className="text-sm font-medium text-white/70 tracking-widest">
+              <span className="text-sm font-medium text-white/70 tracking-widest bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">
                 {selectedIndex + 1} / {images.length}
               </span>
             </div>
 
             {/* Main Image Container */}
-            <div className="flex-1 relative w-full h-full flex items-center justify-center p-4 sm:p-12 select-none">
-              <div className="relative w-full h-full max-w-7xl mx-auto">
-                <Image
-                  src={images[selectedIndex].url}
-                  alt={`Enlarged property photo ${selectedIndex + 1}`}
-                  fill
-                  className="object-contain"
-                  sizes="100vw"
-                  priority
-                />
-              </div>
+            <div className="flex-1 relative w-full h-full flex items-center justify-center select-none overflow-hidden">
+              <ZoomableImage 
+                src={images[selectedIndex].url} 
+                alt={`Enlarged property photo ${selectedIndex + 1}`} 
+              />
 
               {/* Elegant Navigation Arrows */}
               {images.length > 1 && (
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                    className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white transition-all transform hover:scale-110 focus:outline-none"
+                    className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white transition-all transform hover:scale-110 focus:outline-none z-40 bg-black/20 rounded-full backdrop-blur-sm"
                     aria-label="Previous photo"
                   >
-                    <ChevronLeft className="w-10 h-10 sm:w-14 sm:h-14 drop-shadow-xl" strokeWidth={1.5} />
+                    <ChevronLeft className="w-8 h-8 sm:w-12 sm:h-12 drop-shadow-xl" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                    className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white transition-all transform hover:scale-110 focus:outline-none"
+                    className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white transition-all transform hover:scale-110 focus:outline-none z-40 bg-black/20 rounded-full backdrop-blur-sm"
                     aria-label="Next photo"
                   >
-                    <ChevronRight className="w-10 h-10 sm:w-14 sm:h-14 drop-shadow-xl" strokeWidth={1.5} />
+                    <ChevronRight className="w-8 h-8 sm:w-12 sm:h-12 drop-shadow-xl" strokeWidth={1.5} />
                   </button>
                 </>
               )}

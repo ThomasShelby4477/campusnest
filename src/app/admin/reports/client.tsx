@@ -1,13 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import {
   Ban, Check, ExternalLink, Clock, RotateCcw,
   Eye, X, ChevronRight, Home, Mail, Shield,
   ImageIcon, AlertTriangle, UserCircle2, ChevronDown, ChevronUp,
+  Search, ArrowUpDown, SlidersHorizontal,
 } from 'lucide-react'
+
+type SortKey = 'newest' | 'oldest'
 
 // ── Display helpers ───────────────────────────────────────────
 const STATUS_STYLES: Record<string, string> = {
@@ -33,6 +40,12 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
   const [detailsPanel, setDetailsPanel] = useState<{ report: any; data: any } | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // ── Search / Filter / Sort state ──────────────────────────────
+  const [search, setSearch] = useState('')
+  const [reasonFilter, setReasonFilter] = useState('ALL')
+  const [typeFilter, setTypeFilter] = useState('ALL')
+  const [sort, setSort] = useState<SortKey>('newest')
 
   // ── API helpers ───────────────────────────────────────────────
   const updateStatus = async (reportId: string, status: string) => {
@@ -127,7 +140,7 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
     setLoadingId(null)
   }
 
-  // ── Filter counts ─────────────────────────────────────────────
+  // ── Filter counts (always from full reports list) ─────────────
   const counts = {
     ALL: reports.length,
     OPEN: reports.filter((r: any) => r.status === 'OPEN').length,
@@ -135,7 +148,34 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
     RESOLVED: reports.filter((r: any) => r.status === 'RESOLVED').length,
     DISMISSED: reports.filter((r: any) => r.status === 'DISMISSED').length,
   }
-  const filtered = filter === 'ALL' ? reports : reports.filter((r: any) => r.status === filter)
+
+  // ── Layered filtering + sort ──────────────────────────────────
+  const filtered = useMemo(() => {
+    let list: any[] = filter === 'ALL' ? reports : reports.filter((r: any) => r.status === filter)
+
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(r =>
+        (r.reporter?.name || '').toLowerCase().includes(q) ||
+        (r.reporter?.email || '').toLowerCase().includes(q) ||
+        (r.target_label || '').toLowerCase().includes(q) ||
+        (r.target_email || '').toLowerCase().includes(q) ||
+        (r.description || '').toLowerCase().includes(q)
+      )
+    }
+    if (reasonFilter !== 'ALL') list = list.filter(r => r.reason === reasonFilter)
+    if (typeFilter !== 'ALL') list = list.filter(r => r.target_type === typeFilter)
+
+    list = [...list].sort((a, b) => {
+      if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      return 0
+    })
+    return list
+  }, [reports, filter, search, reasonFilter, typeFilter, sort])
+
+  const hasActiveFilter = search || reasonFilter !== 'ALL' || typeFilter !== 'ALL'
+
 
   // ── Shared action buttons ─────────────────────────────────────
   const ActionButtons = ({ r, compact = false }: { r: any; compact?: boolean }) => {
@@ -214,12 +254,85 @@ export function ReportsClient({ initialReports }: { initialReports: any[] }) {
         ))}
       </div>
 
+      {/* ── Search + secondary filters ───────────────────────── */}
+      <div className="bg-white border border-border-light rounded-2xl p-3 space-y-3 shadow-sm">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+          <Input
+            placeholder="Search reporter, target name/email, description…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 h-10 rounded-xl bg-muted-bg border-0 focus-visible:ring-1"
+          />
+        </div>
+
+        {/* Filters row */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Reason */}
+          <Select value={reasonFilter} onValueChange={v => setReasonFilter(v)}>
+            <SelectTrigger className="h-9 w-[140px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
+              <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
+              <SelectValue placeholder="Reason" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Reasons</SelectItem>
+              <SelectItem value="FAKE_LISTING">Fake Listing</SelectItem>
+              <SelectItem value="SCAM">Scam / Fraud</SelectItem>
+              <SelectItem value="HARASSMENT">Harassment</SelectItem>
+              <SelectItem value="SPAM">Spam</SelectItem>
+              <SelectItem value="DISCRIMINATION">Discrimination</SelectItem>
+              <SelectItem value="OTHER">Other</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Target type */}
+          <Select value={typeFilter} onValueChange={v => setTypeFilter(v)}>
+            <SelectTrigger className="h-9 w-[120px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Types</SelectItem>
+              <SelectItem value="LISTING">Listings</SelectItem>
+              <SelectItem value="USER">Users</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Sort */}
+          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+            <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
+              <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilter && (
+            <button
+              onClick={() => { setSearch(''); setReasonFilter('ALL'); setTypeFilter('ALL') }}
+              className="h-9 px-3 rounded-xl text-xs font-semibold text-coral hover:bg-coral/5 transition-colors border border-coral/20"
+            >
+              Clear filters
+            </button>
+          )}
+
+          <span className="ml-auto self-center text-xs font-semibold text-text-muted whitespace-nowrap">
+            {filtered.length} report{filtered.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
       {/* Empty state */}
       {filtered.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-border-light text-text-muted text-sm">
-          No {filter === 'ALL' ? '' : filter.toLowerCase() + ' '}reports found.
+          <SlidersHorizontal className="w-8 h-8 mx-auto mb-3 opacity-30" />
+          No {filter === 'ALL' ? '' : filter.toLowerCase() + ' '}reports match your filters.
         </div>
       )}
+
 
       {/* ── Desktop Table ────────────────────────────────── */}
       {filtered.length > 0 && (

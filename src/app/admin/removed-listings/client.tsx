@@ -1,21 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import {
   RotateCcw, ExternalLink, MapPin, ImageIcon, Home,
-  User, Mail, Shield, ChevronDown, ChevronUp, Search
+  User, Mail, Shield, ChevronDown, ChevronUp, Search, ArrowUpDown, SlidersHorizontal,
 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import Link from 'next/link'
+
+type SortKey = 'removed_desc' | 'removed_asc' | 'rent_asc' | 'rent_desc' | 'newest'
+
+const ROOM_TYPES = ['SINGLE', '1BHK', '2BHK', '3BHK', 'PG', 'SHARED']
+const ROOM_LABELS: Record<string, string> = {
+  SINGLE: 'Single Room', '1BHK': '1 BHK', '2BHK': '2 BHK', '3BHK': '3 BHK', PG: 'PG / Hostel', SHARED: 'Shared',
+}
 
 export function RemovedListingsClient({ initialListings }: { initialListings: any[] }) {
   const [listings, setListings] = useState(initialListings)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // ── Search / Filter / Sort ────────────────────────────────────
   const [search, setSearch] = useState('')
+  const [roomType, setRoomType] = useState('ALL')
+  const [sort, setSort] = useState<SortKey>('removed_desc')
+
   const supabase = createClient()
 
   const handleRestore = async (listing: any) => {
@@ -33,45 +48,102 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
       toast.success('Listing restored. User has been notified.')
     } catch (err: any) {
       toast.error(err.message || 'Failed to restore listing')
-    } finally {
-      setLoadingId(null)
-    }
+    } finally { setLoadingId(null) }
   }
 
-  const filtered = listings.filter(l => {
-    const host = l['profiles!listings_poster_id_fkey'] || l.profiles || {}
-    const matchesSearch = !search ||
-      (l.title || '').toLowerCase().includes(search.toLowerCase()) ||
-      (host.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (host.email || '').toLowerCase().includes(search.toLowerCase())
-    return matchesSearch
-  })
-
-  const getHost = (l: any) => {
-    return l['profiles!listings_poster_id_fkey'] || l.profiles || {}
-  }
-
+  const getHost = (l: any) => l['profiles!listings_poster_id_fkey'] || l.profiles || {}
   const getPrimaryImage = (l: any) => {
     const imgs = l.listing_images || []
     return imgs.find((img: any) => img.is_primary)?.url || imgs[0]?.url || null
   }
 
+  // ── Filtered + sorted list ────────────────────────────────────
+  const filtered = useMemo(() => {
+    let list = listings
+
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(l => {
+        const host = getHost(l)
+        return (l.title || '').toLowerCase().includes(q) ||
+          (host.name || '').toLowerCase().includes(q) ||
+          (host.email || '').toLowerCase().includes(q) ||
+          (l.removal_reason || '').toLowerCase().includes(q)
+      })
+    }
+    if (roomType !== 'ALL') list = list.filter(l => l.room_type === roomType)
+
+    list = [...list].sort((a, b) => {
+      if (sort === 'removed_desc') return new Date(b.updated_at ?? b.removed_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.removed_at ?? a.created_at).getTime()
+      if (sort === 'removed_asc') return new Date(a.updated_at ?? a.removed_at ?? a.created_at).getTime() - new Date(b.updated_at ?? b.removed_at ?? b.created_at).getTime()
+      if (sort === 'rent_asc') return (a.rent || 0) - (b.rent || 0)
+      if (sort === 'rent_desc') return (b.rent || 0) - (a.rent || 0)
+      if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      return 0
+    })
+    return list
+  }, [listings, search, roomType, sort])
+
+  const hasActiveFilter = search || roomType !== 'ALL'
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
+
+      {/* ── Search + Filters bar ──────────────────────────────── */}
+      <div className="bg-white border border-border-light rounded-2xl p-3 space-y-3 shadow-sm">
+        {/* Search */}
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input
-            placeholder="Search by title, host name, or email..."
+            placeholder="Search by title, host, email or removal reason…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9 h-10 rounded-2xl bg-white"
+            className="pl-9 h-10 rounded-xl bg-muted-bg border-0 focus-visible:ring-1"
           />
         </div>
-        <span className="text-xs font-semibold text-text-muted whitespace-nowrap">
-          {filtered.length} listing{filtered.length !== 1 ? 's' : ''}
-        </span>
+
+        {/* Filters row */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Room type */}
+          <Select value={roomType} onValueChange={v => setRoomType(v)}>
+            <SelectTrigger className="h-9 w-[130px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
+              <Home className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
+              <SelectValue placeholder="Room Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Types</SelectItem>
+              {ROOM_TYPES.map(rt => <SelectItem key={rt} value={rt}>{ROOM_LABELS[rt]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          {/* Sort */}
+          <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+            <SelectTrigger className="h-9 w-[160px] rounded-xl bg-muted-bg border-0 text-xs font-semibold">
+              <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-text-muted" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="removed_desc">Removed: latest first</SelectItem>
+              <SelectItem value="removed_asc">Removed: oldest first</SelectItem>
+              <SelectItem value="rent_asc">Rent: low → high</SelectItem>
+              <SelectItem value="rent_desc">Rent: high → low</SelectItem>
+              <SelectItem value="newest">Posted: newest</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilter && (
+            <button
+              onClick={() => { setSearch(''); setRoomType('ALL') }}
+              className="h-9 px-3 rounded-xl text-xs font-semibold text-coral hover:bg-coral/5 transition-colors border border-coral/20"
+            >
+              Clear filters
+            </button>
+          )}
+
+          <span className="ml-auto self-center text-xs font-semibold text-text-muted whitespace-nowrap">
+            {filtered.length} / {listings.length} removed
+          </span>
+        </div>
       </div>
 
       {listings.length === 0 ? (
@@ -83,8 +155,9 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
           <p className="text-text-muted">All listings are currently active. Removed listings will appear here.</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-border-light p-12 text-center text-text-muted text-sm">
-          No listings match your search.
+        <div className="bg-white rounded-2xl border border-border-light p-12 text-center text-text-muted text-sm">
+          <SlidersHorizontal className="w-8 h-8 mx-auto mb-3 opacity-30" />
+          No listings match your filters.
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -115,8 +188,9 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-navy truncate">{l.title}</h3>
                     <p className="text-sm text-text-muted truncate">{host.name || 'Unknown host'} · {host.email || ''}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-lg font-black text-navy">₹{l.rent?.toLocaleString('en-IN')}</span>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-base font-black text-navy">₹{l.rent?.toLocaleString('en-IN')}</span>
+                      <span className="text-[10px] font-semibold text-text-muted bg-muted-bg px-2 py-0.5 rounded-full">{ROOM_LABELS[l.room_type] ?? l.room_type}</span>
                       <span className="text-[10px] font-bold bg-danger/10 text-danger px-2 py-0.5 rounded-full">Removed</span>
                     </div>
                   </div>
@@ -147,7 +221,7 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
                     )}
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                      <DetailItem icon={<Home className="w-3.5 h-3.5" />} label="Room Type" value={l.room_type} />
+                      <DetailItem icon={<Home className="w-3.5 h-3.5" />} label="Room Type" value={ROOM_LABELS[l.room_type] ?? l.room_type} />
                       <DetailItem icon={<MapPin className="w-3.5 h-3.5" />} label="Address" value={l.address} />
                       <DetailItem icon={<MapPin className="w-3.5 h-3.5" />} label="Distance" value={l.distance_from_college != null ? `${l.distance_from_college.toFixed(1)} km` : 'N/A'} />
                       <DetailItem icon={<ExternalLink className="w-3.5 h-3.5" />} label="Views" value={l.views || 0} />
@@ -158,7 +232,7 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
                       <p className="text-sm text-text-primary leading-relaxed">{l.removal_reason || 'No reason provided.'}</p>
                       {l.removed_at && (
                         <p className="text-xs text-text-muted mt-2">
-                          Removed on {new Date(l.removed_at).toLocaleDateString('en-IN', { dateStyle: 'long', timeStyle: 'short' })}
+                          Removed on {new Date(l.removed_at).toLocaleDateString('en-IN', { dateStyle: 'long' })}
                         </p>
                       )}
                     </div>
@@ -186,9 +260,7 @@ export function RemovedListingsClient({ initialListings }: { initialListings: an
                           <p className="font-bold text-navy text-sm">{host.name || 'Unknown'}</p>
                           <p className="text-xs text-text-muted flex items-center gap-1"><Mail className="w-3 h-3" /> {host.email}</p>
                         </div>
-                        {host.verified_status === 'VERIFIED' && (
-                          <Shield className="w-5 h-5 text-success ml-auto" />
-                        )}
+                        {host.verified_status === 'VERIFIED' && <Shield className="w-5 h-5 text-success ml-auto" />}
                       </div>
                     </div>
 

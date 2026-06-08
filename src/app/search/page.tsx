@@ -137,10 +137,15 @@ function SearchContent() {
       {/* Gender lock notice */}
       {genderLocked && (
         <div className="flex items-center gap-2 text-xs text-text-muted bg-muted-bg rounded-lg px-3 py-1.5 border border-border-light">
-          <span className="text-base">{userGender === 'MALE' ? '♂' : '♀'}</span>
-          Showing <strong className="text-navy">{userGender === 'MALE' ? 'boys-only & co-ed' : 'girls-only & co-ed'}</strong> listings based on your profile
+          <span className="text-sm">{userGender === 'MALE' ? '♂️' : '♀️'}</span>
+          Showing only{' '}
+          <strong className="text-navy">
+            {userGender === 'MALE' ? 'boys' : 'girls'} listings
+          </strong>{' '}
+          — based on your profile gender
         </div>
       )}
+
     </div>
   )
 
@@ -201,7 +206,8 @@ function SearchContent() {
         <div className="py-8">
           <EmptyState
             icon="search" title="No listings found"
-            description={genderLocked ? `No ${userGender === 'MALE' ? 'boys-only or co-ed' : 'girls-only or co-ed'} listings match your filters.` : 'Try adjusting your filters.'}
+            description={genderLocked ? `No ${userGender === 'MALE' ? 'boys' : 'girls'} listings match your filters.` : 'Try adjusting your filters.'}
+
             actionLabel="Clear Filters"
             onAction={() => { setMinRent(''); setMaxRent(''); setRoomType('ALL') }}
           />

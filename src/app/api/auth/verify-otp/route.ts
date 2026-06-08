@@ -41,6 +41,19 @@ export async function POST(req: Request) {
   console.log('[verify-otp] Result:', { userId: data?.user?.id, error: error?.message })
 
   if (error) {
+    // Supabase Auth returns this when the user has a ban_duration set
+    const isBanned =
+      error.message?.toLowerCase().includes('banned') ||
+      error.message?.toLowerCase().includes('user is banned')
+    if (isBanned) {
+      return NextResponse.json(
+        {
+          suspended: true,
+          error: 'Your account has been suspended due to a violation of our community guidelines. If you believe this is a mistake, please contact us at email@campusnest.com',
+        },
+        { status: 403 }
+      )
+    }
     return NextResponse.json({ error: error.message || 'Invalid OTP' }, { status: 400 })
   }
 

@@ -59,6 +59,12 @@ function LoginContent() {
 
     const data = await res.json()
 
+    // Suspended account — redirect to the suspension page immediately
+    if (res.status === 403 && data.suspended) {
+      window.location.href = '/suspended'
+      return
+    }
+
     if (!res.ok) {
       toast.error(data.error || 'Invalid OTP. Please try again.')
       throw new Error(data.error)

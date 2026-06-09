@@ -125,7 +125,11 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
         }
       }
 
-      setOtherUser(other)
+      // Mark other user as suspended if their account is inactive
+      setOtherUser(other ? {
+        ...other,
+        isSuspended: other.is_active === false,
+      } : null)
       setMyProfile(mine)
 
       const { data: initialMessages } = await supabase
@@ -293,9 +297,14 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
               )}
             </div>
             <div>
-              <h2 className="font-bold text-text-primary leading-tight">{otherUser?.name || 'User'}</h2>
+              <h2 className="font-bold text-text-primary leading-tight">
+                {otherUser?.isSuspended ? 'Account Suspended' : (otherUser?.name || 'User')}
+              </h2>
               <p className="text-xs text-text-muted font-medium">
-                {chatType === 'LISTING' ? 'Listing Inquiry' : chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'}
+                {otherUser?.isSuspended
+                  ? 'This account has been suspended'
+                  : chatType === 'LISTING' ? 'Listing Inquiry' : chatType === 'BUDDY' ? 'House Hunting Buddy' : 'Potential Roommate'
+                }
               </p>
             </div>
           </button>
@@ -329,18 +338,27 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         <div className="text-center pb-6">
           <div className="w-20 h-20 bg-navy/5 rounded-full flex items-center justify-center mx-auto mb-3 overflow-hidden relative">
-            {otherUser?.avatar_url ? (
+            {(otherUser?.avatar_url && !otherUser?.isSuspended) ? (
                <Image src={otherUser.avatar_url} alt={otherUser.name} fill className="object-cover" />
             ) : (
               <UserCircle2 className="w-12 h-12 text-text-muted" />
             )}
           </div>
-          <h3 className="font-bold text-text-primary text-lg">Chat with {otherUser?.name}</h3>
-          <p className="text-sm text-text-muted mt-1">
-            {chatType === 'LISTING'
-              ? 'Discuss the listing details and schedule a viewing.'
-              : 'Start chatting to see if you\'re a good fit!'}
-          </p>
+          {otherUser?.isSuspended ? (
+            <>
+              <h3 className="font-bold text-danger text-lg">Account Suspended</h3>
+              <p className="text-sm text-text-muted mt-1">This user&apos;s account has been suspended. Chat is read-only.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="font-bold text-text-primary text-lg">Chat with {otherUser?.name}</h3>
+              <p className="text-sm text-text-muted mt-1">
+                {chatType === 'LISTING'
+                  ? 'Discuss the listing details and schedule a viewing.'
+                  : 'Start chatting to see if you\'re a good fit!'}
+              </p>
+            </>
+          )}
         </div>
 
         {messages.map((msg, idx) => {
@@ -380,7 +398,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
                       </div>
                     )
                   ) : (
-                    otherUser?.avatar_url ? (
+                    (otherUser?.avatar_url && !otherUser?.isSuspended) ? (
                       <Image 
                         src={otherUser.avatar_url} 
                         alt={otherUser.name || 'User'} 
@@ -389,7 +407,7 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
                       />
                     ) : (
                       <div className="w-full h-full bg-coral flex items-center justify-center text-[10px] text-white font-bold">
-                        {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {otherUser?.isSuspended ? '?' : (otherUser?.name?.charAt(0)?.toUpperCase() || 'U')}
                       </div>
                     )
                   )}
@@ -433,13 +451,17 @@ export default function ChatPage({ params }: { params: Promise<{ matchId: string
       </div>
 
       {/* Input or Closed Banner */}
-      {isClosed ? (
+      {(isClosed || otherUser?.isSuspended) ? (
         <div className="bg-muted-bg border-t border-border-light p-4 shrink-0 flex flex-col items-center justify-center gap-3">
           <div className="flex items-center justify-center gap-2 text-text-muted text-sm font-medium py-1">
             <XCircle className="w-4 h-4 text-danger" />
-            <span>This chat has been permanently closed. Messages are read-only.</span>
+            <span>
+              {otherUser?.isSuspended
+                ? 'This user has been suspended. Messaging is disabled.'
+                : 'This chat has been permanently closed. Messages are read-only.'}
+            </span>
           </div>
-          {(!closedBy || closedBy === currentUser?.id) && (
+          {isClosed && !otherUser?.isSuspended && (!closedBy || closedBy === currentUser?.id) && (
             <Button variant="outline" size="sm" onClick={handleReopenChat} disabled={closing}>
               {closing ? 'Reopening...' : 'Reopen Chat'}
             </Button>

@@ -52,6 +52,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to suspend user' }, { status: 500 })
     }
 
+    // 1b. Deactivate ALL listings posted by this user so they are hidden site-wide
+    const { error: listingsError } = await supabaseAdmin
+      .from('listings')
+      .update({ is_active: false })
+      .eq('poster_id', userId)
+    if (listingsError) {
+      console.warn('Failed to deactivate suspended user listings (non-fatal):', listingsError)
+    }
+
     // 2. Ban at Supabase Auth level — prevents new OTP requests & logins
     //    Run twice if first attempt fails (handles ban_duration state edge cases)
     for (let attempt = 0; attempt < 2; attempt++) {

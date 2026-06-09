@@ -39,8 +39,10 @@ export async function GET(request: NextRequest) {
         user_preferences!inner(*)
       `)
       .eq('verified_status', 'VERIFIED')
+      .eq('is_active', true)  // exclude suspended users from roommate feed
       .neq('id', user.id)
       .eq('user_preferences.quiz_completed', true)
+
 
     if (targetError) throw targetError
 

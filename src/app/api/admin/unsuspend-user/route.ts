@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to unsuspend user' }, { status: 500 })
     }
 
+    // 1b. Re-activate all listings that belonged to this user
+    const { error: listingsError } = await supabaseAdmin
+      .from('listings')
+      .update({ is_active: true })
+      .eq('poster_id', userId)
+    if (listingsError) {
+      console.warn('Failed to re-activate user listings after unsuspend (non-fatal):', listingsError)
+    }
+
     // 2. Lift the Supabase Auth ban (retry once on failure)
     let banLifted = false
     for (let attempt = 0; attempt < 2; attempt++) {

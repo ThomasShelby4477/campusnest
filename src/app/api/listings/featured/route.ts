@@ -31,9 +31,11 @@ export async function GET() {
       has_ac,
       food_available,
       gender_allowed,
-      listing_images ( url, is_primary, "order" )
+      listing_images ( url, is_primary, "order" ),
+      poster:profiles!listings_poster_id_fkey ( is_active )
     `)
     .eq('is_active', true)
+    .eq('profiles.is_active', true)  // exclude suspended poster listings
 
   // Hard gender filter — same rule as search page:
   // MALE users see MALE + ANY; FEMALE users see FEMALE + ANY; guests see all
@@ -52,12 +54,18 @@ export async function GET() {
     return NextResponse.json({ listings: [] })
   }
 
-  // Sort images by order within each listing
-  const listings = (data || []).map((l: any) => ({
-    ...l,
-    images: [...(l.listing_images || [])].sort((a: any, b: any) => a.order - b.order),
-    verified_status: 'VERIFIED',
-  }))
+  // Filter out listings from suspended posters (double-check since FK filter may not work on all Supabase plans)
+  // and sort images by order within each listing
+  const listings = (data || [])
+    .filter((l: any) => {
+      const poster = Array.isArray(l.poster) ? l.poster[0] : l.poster
+      return poster?.is_active !== false
+    })
+    .map((l: any) => ({
+      ...l,
+      images: [...(l.listing_images || [])].sort((a: any, b: any) => a.order - b.order),
+      verified_status: 'VERIFIED',
+    }))
 
   return NextResponse.json({ listings })
 }

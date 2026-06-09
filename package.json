@@ -21,6 +21,7 @@
     "@types/mdx": "^2.0.13",
     "@use-gesture/react": "^10.3.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "@vis.gl/react-google-maps": "^1.8.3",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",

@@ -37,9 +37,10 @@ function SearchContent() {
 
   // Gender filter: derived from the signed-in user's gender — cannot be overridden
   // MALE users → see MALE + ANY listings; FEMALE users → see FEMALE + ANY listings
-  // Not logged in → see all
+  // Admins bypass this constraint.
   const userGender = user?.gender as string | undefined
-  const genderLocked = userGender === 'MALE' || userGender === 'FEMALE'
+  const isAdmin = user?.role === 'ADMIN'
+  const genderLocked = !isAdmin && (userGender === 'MALE' || userGender === 'FEMALE')
 
   const fetchSaved = useCallback(async () => {
     if (!user) return
@@ -61,12 +62,14 @@ function SearchContent() {
     if (roomType !== 'ALL') query = query.eq('room_type', roomType)
 
     // Hard gender enforcement: logged-in users only see listings matching their gender or ANY
-    if (userGender === 'MALE') {
-      query = query.in('gender_allowed', ['MALE', 'ANY'])
-    } else if (userGender === 'FEMALE') {
-      query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+    if (!isAdmin) {
+      if (userGender === 'MALE') {
+        query = query.in('gender_allowed', ['MALE', 'ANY'])
+      } else if (userGender === 'FEMALE') {
+        query = query.in('gender_allowed', ['FEMALE', 'ANY'])
+      }
     }
-    // Unauthenticated users see all listings
+    // Unauthenticated users and Admins see all listings
 
     const currentPage = isLoadMore ? page + 1 : 0
     query = query.range(currentPage * 12, currentPage * 12 + 11).order('created_at', { ascending: false })
@@ -79,10 +82,11 @@ function SearchContent() {
       setHasMore(data.length === 12)
     }
     setLoading(false)
-  }, [minRent, maxRent, roomType, userGender, page])
+  }, [minRent, maxRent, roomType, userGender, page, isAdmin])
 
   useEffect(() => { fetchSaved() }, [fetchSaved])
-  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, userGender]) // eslint-disable-line
+  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, userGender, isAdmin]) // eslint-disable-line
+
 
   // Handle ?listingId=... to auto-open a listing from external links
   useEffect(() => {

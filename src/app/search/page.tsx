@@ -19,7 +19,7 @@ const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
 function SearchContent() {
   const searchParams = useSearchParams()
-  const { user } = useAuthStore()
+  const { user, isLoading } = useAuthStore()
 
   const [listings, setListings] = useState<any[]>([])
   const [savedListingIds, setSavedListingIds] = useState<Set<string>>(new Set())
@@ -50,6 +50,7 @@ function SearchContent() {
   }, [user])
 
   const fetchListings = useCallback(async (isLoadMore = false) => {
+    if (isLoading) return
     setLoading(true)
     const supabase = createClient()
     let query = supabase
@@ -82,10 +83,10 @@ function SearchContent() {
       setHasMore(data.length === 12)
     }
     setLoading(false)
-  }, [minRent, maxRent, roomType, userGender, page, isAdmin])
+  }, [minRent, maxRent, roomType, userGender, page, isAdmin, isLoading])
 
   useEffect(() => { fetchSaved() }, [fetchSaved])
-  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, userGender, isAdmin]) // eslint-disable-line
+  useEffect(() => { fetchListings(false) }, [minRent, maxRent, roomType, userGender, isAdmin, isLoading]) // eslint-disable-line
 
 
   // Handle ?listingId=... to auto-open a listing from external links
@@ -114,6 +115,14 @@ function SearchContent() {
 
   const handleSelectListing = (listing: any) => {
     setSelectedListing((prev: any) => prev?.id === listing.id ? null : listing)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-muted-bg">
+        <div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" />
+      </div>
+    )
   }
 
   const FiltersBar = (

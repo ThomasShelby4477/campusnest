@@ -78,13 +78,12 @@ export default function SignupPage() {
       throw new Error(data.error)
     }
 
-    // Sync session to browser Supabase client → triggers onAuthStateChange → navbar updates
-    if (data.access_token && data.refresh_token) {
+    // Sync session to browser Supabase client → triggers onAuthStateChange → navbar updates.
+    // The server sets the session via HttpOnly cookies (F-3 — tokens no longer returned in body).
+    // refreshSession() reads those cookies and restores the client-side auth state.
+    {
       const supabase = createClient()
-      await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      })
+      await supabase.auth.refreshSession()
     }
 
     // Fetch the profile to decide which step to resume at

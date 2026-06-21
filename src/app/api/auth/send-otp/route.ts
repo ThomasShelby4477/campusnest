@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { rateLimitDistributed, DistributedRateLimitResult } from '@/lib/rate-limit-distributed'
+import { getClientIp } from '@/lib/rate-limit'
 
 const ALLOWED_DOMAIN = process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN || 'nfsu.ac.in'
 
@@ -17,15 +18,16 @@ const schema = z.object({
 })
 
 export async function POST(request: NextRequest) {
-  // [SECURITY C-2] Rate limit: 5 OTP requests per 15 minutes per IP
+  // [F-7] Distributed rate limit: 5 OTP requests per 15 minutes per IP
+  // Uses Supabase-backed counter shared across all serverless instances.
   const ip = getClientIp(request)
-  const rl = rateLimit(`otp:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 })
-  if (!rl.success) {
+  const rlIp: DistributedRateLimitResult = await rateLimitDistributed(`otp:ip:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 })
+  if (!rlIp.success) {
     return NextResponse.json(
       { error: 'Too many OTP requests. Please wait before trying again.' },
       {
         status: 429,
-        headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+        headers: { 'Retry-After': String(Math.ceil((rlIp.resetAt - Date.now()) / 1000)) },
       }
     )
   }
@@ -40,6 +42,22 @@ export async function POST(request: NextRequest) {
     }
 
     const { email, context } = result.data
+
+    // [F-7+F-22] Per-email distributed rate limit — blocks inbox flooding
+    // from many source IPs. Shared across all serverless instances.
+    const rlEmail: DistributedRateLimitResult = await rateLimitDistributed(
+      `otp:email:${email.toLowerCase()}`,
+      { limit: 5, windowMs: 15 * 60 * 1000 }
+    )
+    if (!rlEmail.success) {
+      return NextResponse.json(
+        { error: 'Too many OTP requests for this address. Please wait before trying again.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rlEmail.resetAt - Date.now()) / 1000)) },
+        }
+      )
+    }
 
     // For signup: check if user already exists → tell them to log in instead
     if (context === 'signup') {

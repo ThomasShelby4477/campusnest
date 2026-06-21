@@ -1,9 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { csrfGuard } from '@/lib/csrf'
+import { sanitizeNotificationBody, sanitizeReason } from '@/lib/sanitize'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site admin action forgery
+    const csrfError = csrfGuard(req)
+    if (csrfError) return csrfError
+
     // 1. Verify the caller is an authenticated user
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -39,7 +45,7 @@ export async function POST(req: Request) {
     const updateData: Record<string, any> = { verified_status: action }
 
     if (action === 'REJECTED') {
-      updateData.rejection_reason = reason || 'Your verification documents could not be accepted.'
+      updateData.rejection_reason = sanitizeReason(reason || 'Your verification documents could not be accepted.')
     }
 
     if (action === 'VERIFIED') {
@@ -59,7 +65,7 @@ export async function POST(req: Request) {
         user_id: userId,
         type: 'VERIFICATION_REJECTED',
         title: 'Verification Update',
-        body: `Your ID verification was not approved. Reason: ${updateData.rejection_reason}`,
+        body: sanitizeNotificationBody(`Your ID verification was not approved. Reason: ${updateData.rejection_reason}`),
         link: '/reverify',
       })
     } else if (action === 'VERIFIED') {
@@ -67,7 +73,7 @@ export async function POST(req: Request) {
         user_id: userId,
         type: 'VERIFICATION_APPROVED',
         title: 'Verification Approved',
-        body: 'Your student ID has been verified. You now have full access to CampusNest!',
+        body: sanitizeNotificationBody('Your student ID has been verified. You now have full access to CampusNest!'),
         link: '/search',
       })
     }

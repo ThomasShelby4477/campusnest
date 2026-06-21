@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { rateLimit } from '@/lib/rate-limit'
+import { rateLimitDistributed } from '@/lib/rate-limit-distributed'
+import { csrfGuard } from '@/lib/csrf'
 import sharp from 'sharp'
 
 // Supported MIME types and their magic bytes
@@ -64,6 +65,10 @@ async function watermarkImage(
 
 export async function POST(request: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site upload form submissions
+    const csrfError = csrfGuard(request)
+    if (csrfError) return csrfError
+
     const supabase = await createClient()
     const {
       data: { user },
@@ -73,8 +78,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // [SECURITY H-1] Rate limit: 5 ID card uploads per hour per user
-    const rl = rateLimit(`upload:idcard:${user.id}`, { limit: 5, windowMs: 60 * 60 * 1000 })
+    // [F-7] Distributed rate limit: 5 ID card uploads per hour per user
+    const rl = await rateLimitDistributed(`upload:idcard:${user.id}`, { limit: 5, windowMs: 60 * 60 * 1000 })
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many uploads. Please try again later.' }, { status: 429 })
     }

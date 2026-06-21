@@ -2,11 +2,14 @@ import type { NextConfig } from "next";
 import createMDX from '@next/mdx'
 
 // [SECURITY M-1] Comprehensive HTTP security headers
+// NOTE: Content-Security-Policy is intentionally absent here.
+// It is generated dynamically per-request in src/middleware.ts with a
+// per-request nonce so unsafe-inline can be removed from script-src.
 const securityHeaders = [
   // Prevent MIME-type sniffing
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   // Prevent clickjacking
-  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Frame-Options', value: 'DENY' },
   // Control referrer information
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   // Enforce HTTPS for 2 years
@@ -15,27 +18,6 @@ const securityHeaders = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
   // DNS prefetch control
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
-  // Content Security Policy
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      // Scripts: self + Firebase CDN (for service worker) + Google Maps
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com",
-      // Styles: self + Google Fonts
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      // Fonts: self + Google Fonts
-      "font-src 'self' https://fonts.gstatic.com",
-      // Images: self + Supabase storage + data URIs
-      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://maps.googleapis.com https://maps.gstatic.com",
-      // XHR/Fetch: self + Supabase + FCM + Google Maps API
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fcm.googleapis.com https://maps.googleapis.com",
-      // Workers: self + blob (for Firebase SW)
-      "worker-src 'self' blob:",
-      // No embedding in foreign frames
-      "frame-ancestors 'none'",
-    ].join('; '),
-  },
 ]
 
 const nextConfig: NextConfig = {

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { csrfGuard } from '@/lib/csrf'
 
 /**
  * POST /api/auth/signout
@@ -9,7 +10,11 @@ import { cookies } from 'next/headers'
  * 1. Calls supabase.auth.signOut() to revoke the refresh token server-side
  * 2. Manually expires every Supabase auth cookie so the browser removes them
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // [F-5] CSRF guard — prevent forced cross-site logout
+  const csrfError = csrfGuard(req)
+  if (csrfError) return csrfError
+
   try {
     const cookieStore = await cookies()
     const supabase = await createClient()

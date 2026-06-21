@@ -1,9 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { csrfGuard } from '@/lib/csrf'
+import { sanitizeNotificationBody, sanitizeReason } from '@/lib/sanitize'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site admin action forgery
+    const csrfError = csrfGuard(req)
+    if (csrfError) return csrfError
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -38,8 +44,9 @@ export async function POST(req: Request) {
     }
 
     const posterId = (listing as any).poster_id
-    const listingTitle = listing.title
-    const reasonText = reason?.trim() || 'This listing has been removed by an administrator.'
+    const listingTitle = (listing as any).title as string
+    // [F-16] Sanitize admin-supplied reason before storing
+    const reasonText = sanitizeReason(reason?.trim() || 'This listing has been removed by an administrator.')
     const embedded = (listing as any)['profiles!listings_poster_id_fkey'] || (listing as any).profiles || {}
     const posterName = embedded.name || 'User'
 
@@ -79,7 +86,7 @@ export async function POST(req: Request) {
         user_id: posterId,
         type: 'LISTING_REMOVED',
         title: 'Listing Removed',
-        body: `Your listing "${listingTitle}" was removed. Reason: ${reasonText}`,
+        body: sanitizeNotificationBody(`Your listing "${listingTitle}" was removed. Reason: ${reasonText}`),
         link: '/my-listings',
       })
 

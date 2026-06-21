@@ -3,6 +3,8 @@ import { z } from 'zod/v4'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { sendEmail, verificationApprovedEmail, verificationRejectedEmail } from '@/lib/email'
+import { csrfGuard } from '@/lib/csrf'
+import { sanitizeNotificationBody, sanitizeReason } from '@/lib/sanitize'
 
 const actionSchema = z.object({
   user_id: z.string().uuid(),
@@ -12,6 +14,10 @@ const actionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site admin action forgery
+    const csrfError = csrfGuard(request)
+    if (csrfError) return csrfError
+
     const supabase = await createClient()
     const {
       data: { user: admin },
@@ -85,7 +91,7 @@ export async function POST(request: NextRequest) {
         user_id,
         type: 'VERIFICATION_APPROVED',
         title: 'Account Verified! ✅',
-        body: 'Your student ID has been verified. You now have full access to CampusNest.',
+        body: sanitizeNotificationBody('Your student ID has been verified. You now have full access to CampusNest.'),
         link: '/search',
       })
 
@@ -118,12 +124,13 @@ export async function POST(request: NextRequest) {
           { status: 422 }
         )
       }
+      const safeReason = sanitizeReason(reason)
 
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
           verified_status: 'REJECTED',
-          rejection_reason: reason,
+          rejection_reason: safeReason,
           verification_badge: false,
         })
         .eq('id', user_id)
@@ -140,7 +147,7 @@ export async function POST(request: NextRequest) {
         user_id,
         type: 'VERIFICATION_REJECTED',
         title: 'Verification Update',
-        body: `Your ID verification was not approved: ${reason}`,
+        body: sanitizeNotificationBody(`Your ID verification was not approved: ${safeReason}`),
         link: '/signup',
       })
 

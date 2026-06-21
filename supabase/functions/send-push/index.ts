@@ -67,6 +67,15 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
   }
 
+  // [F-18] Defence-in-depth: explicitly verify the caller presents a valid service-role bearer.
+  // Supabase edge runtime validates the JWT at the gateway layer, but this adds an extra
+  // application-level check in case deployment configuration changes.
+  const authHeader = req.headers.get('Authorization')
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!authHeader || !serviceKey || authHeader !== `Bearer ${serviceKey}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  }
+
   try {
     const { fcm_token, title, body, data } = (await req.json()) as RequestBody
 

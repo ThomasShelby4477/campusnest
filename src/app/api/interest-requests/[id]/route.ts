@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { csrfGuard } from '@/lib/csrf'
 
 /**
  * PATCH /api/interest-requests/[id]
@@ -12,6 +13,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // [F-5] CSRF guard — prevents cross-site accept/decline forgery
+    const csrfError = csrfGuard(request)
+    if (csrfError) return csrfError
+
     const { id: requestId } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

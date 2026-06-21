@@ -32,6 +32,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // [F-9] Validate path matches expected pattern to prevent arbitrary storage enumeration.
+    // Pattern: <bucket-prefix>/<uuid>/<filename>.<ext>
+    const VALID_PATH = /^(id-cards|selfies)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[\w.-]+\.(jpg|jpeg|png|pdf|webp)$/i
+    if (!VALID_PATH.test(path)) {
+      return NextResponse.json(
+        { error: 'Invalid path format' },
+        { status: 400 }
+      )
+    }
+
     const { data, error } = await supabaseAdmin.storage
       .from('id-cards')
       .createSignedUrl(path, 300) // 5 min expiry

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { csrfGuard } from '@/lib/csrf'
 
 const bodySchema = z.object({
   reportId: z.string().uuid(),
@@ -10,6 +11,10 @@ const bodySchema = z.object({
 
 export async function PATCH(req: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site admin action forgery
+    const csrfError = csrfGuard(req)
+    if (csrfError) return csrfError
+
     // Auth check — must be an admin
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

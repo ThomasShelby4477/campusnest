@@ -1,9 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { csrfGuard } from '@/lib/csrf'
+import { sanitizeNotificationBody } from '@/lib/sanitize'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site admin action forgery
+    const csrfError = csrfGuard(req)
+    if (csrfError) return csrfError
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -65,7 +71,7 @@ export async function POST(req: Request) {
         user_id: posterId,
         type: 'LISTING_RESTORED',
         title: 'Listing Restored',
-        body: `Your listing "${listingTitle}" has been restored and is now visible to other users.`,
+        body: sanitizeNotificationBody(`Your listing "${listingTitle}" has been restored and is now visible to other users.`),
         link: '/my-listings',
       })
 

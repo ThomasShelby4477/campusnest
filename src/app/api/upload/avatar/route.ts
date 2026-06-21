@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createBrowserClient } from '@/lib/supabase/server'
-import { rateLimit } from '@/lib/rate-limit'
+import { rateLimitDistributed } from '@/lib/rate-limit-distributed'
+import { csrfGuard } from '@/lib/csrf'
 import crypto from 'crypto'
 
 const supabaseAdmin = createClient(
@@ -36,8 +37,12 @@ function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
   return false
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // [F-5] CSRF guard — prevents cross-site upload form submissions
+    const csrfError = csrfGuard(req)
+    if (csrfError) return csrfError
+
     const supabaseServer = await createBrowserClient()
     const { data: { user }, error: authError } = await supabaseServer.auth.getUser()
 
@@ -45,8 +50,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // [SECURITY H-1] Rate limit: 10 avatar uploads per hour per user
-    const rl = rateLimit(`upload:avatar:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })
+    // [F-7] Distributed rate limit: 10 avatar uploads per hour per user
+    const rl = await rateLimitDistributed(`upload:avatar:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many uploads. Please try again later.' }, { status: 429 })
     }

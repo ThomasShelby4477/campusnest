@@ -3,6 +3,16 @@ import { z } from 'zod/v4'
 import { createClient } from '@/lib/supabase/server'
 import { csrfGuard } from '@/lib/csrf'
 
+// [F-15] Only allow avatar images from our own Supabase storage bucket
+function isSupabaseStorageUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host.endsWith('.supabase.co') || host.endsWith('.supabase.in')
+  } catch {
+    return false
+  }
+}
+
 // [SECURITY C-1] Only allow safe, user-editable fields.
 // 'role', 'verified_status', 'verification_badge' are intentionally excluded
 // to prevent privilege escalation — these are set by admin routes only.
@@ -16,7 +26,11 @@ const updateSchema = z.object({
     .optional(),
   gender: z.enum(['MALE', 'FEMALE']).optional(),
   looking_for_buddy: z.boolean().optional(),
-  avatar_url: z.string().url().optional(),
+  avatar_url: z
+    .string()
+    .url()
+    .refine(isSupabaseStorageUrl, { message: 'Avatar must be uploaded to CampusNest storage' })
+    .optional(),
 })
 
 export async function PATCH(request: NextRequest) {

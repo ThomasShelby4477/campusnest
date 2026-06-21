@@ -9,9 +9,13 @@
  */
 
 const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-  // Add any additional production domains here if needed
-].filter(Boolean)
+  process.env.NEXT_PUBLIC_SITE_URL,
+  // Optional: set ADDITIONAL_ALLOWED_ORIGIN for dev tunnels (e.g. ngrok)
+  process.env.ADDITIONAL_ALLOWED_ORIGIN,
+  // Always allow localhost in development
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : null,
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:3001' : null,
+].filter(Boolean) as string[]
 
 /**
  * Returns true if the request's Origin is from our own domain.

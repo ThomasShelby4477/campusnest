@@ -3,12 +3,25 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
+const ALLOWED_DOMAIN = process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN || 'nfsu.ac.in'
+
 export async function POST(req: Request) {
   const { email, token, redirect } = await req.json()
 
   if (!email || !token) {
     return NextResponse.json({ error: 'Email and token are required' }, { status: 400 })
   }
+
+  // [F-12] Re-validate institutional email domain at the verification stage
+  if (!email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`)) {
+    return NextResponse.json({ error: 'Invalid email domain' }, { status: 422 })
+  }
+
+  // [F-8] Validate redirect is a safe relative path — block open-redirect attacks
+  const safeRedirect =
+    typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+      ? redirect
+      : null
 
   const cookieStore = await cookies()
 
@@ -32,13 +45,11 @@ export async function POST(req: Request) {
     }
   )
 
-  console.log('[verify-otp] Verifying OTP for:', email)
   const { data, error } = await supabase.auth.verifyOtp({
     email,
     token,
     type: 'email',
   })
-  console.log('[verify-otp] Result:', { userId: data?.user?.id, error: error?.message })
 
   if (error) {
     // Supabase Auth returns this when the user has a ban_duration set
@@ -68,8 +79,6 @@ export async function POST(req: Request) {
     .eq('id', data.user.id)
     .single()
 
-  console.log('[verify-otp] Profile:', profile)
-
   // ── Suspension gate ──────────────────────────────────────────
   // If the account is suspended, revoke the fresh session immediately
   // so the tokens are never sent to the browser.
@@ -86,7 +95,7 @@ export async function POST(req: Request) {
     )
   }
 
-  let redirectTo = redirect || '/search'
+  let redirectTo = safeRedirect || '/search'
 
   if (!profile) {
     // No profile row yet — brand new user, needs to complete signup
@@ -107,13 +116,11 @@ export async function POST(req: Request) {
     redirectTo = '/reverify'
   } else if (profile.verified_status === 'VERIFIED') {
     // Fully verified — go wherever they were trying to go
-    redirectTo = redirect || '/search'
+    redirectTo = safeRedirect || '/search'
   }
 
-  console.log('[verify-otp] Redirecting to:', redirectTo)
-  return NextResponse.json({
-    redirectTo,
-    access_token: data.session?.access_token,
-    refresh_token: data.session?.refresh_token,
-  })
+  // [F-3] Session is established via HttpOnly cookies set above.
+  // Do NOT return raw tokens in the response body — they are not needed
+  // by the client and would be accessible to third-party JS / network tab.
+  return NextResponse.json({ redirectTo })
 }

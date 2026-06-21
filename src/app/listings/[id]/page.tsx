@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
+import { rateLimitDistributed } from '@/lib/rate-limit-distributed'
 import Image from 'next/image'
 import {
   MapPin, Home, Users, CheckCircle, Wifi, Thermometer, Utensils,
@@ -121,8 +123,22 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     )
   }
 
-  // Increment views
-  await supabase.rpc('increment_views', { listing_id: id })
+  // [F-14] Rate-limited view increment — 1 view per IP per listing per 5 minutes.
+  // Prevents a single user from inflating view counts by refreshing.
+  // Uses distributed counter shared across all serverless instances.
+  try {
+    const requestHeaders = await headers()
+    const ip =
+      requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      requestHeaders.get('x-real-ip') ||
+      'unknown'
+    const rl = await rateLimitDistributed(`views:${ip}:${id}`, { limit: 1, windowMs: 5 * 60 * 1000 })
+    if (rl.success) {
+      await supabase.rpc('increment_views', { listing_id: id })
+    }
+  } catch {
+    // View counting is non-critical — never fail the page load
+  }
 
   const images = [...(listing.listing_images || [])].sort((a, b) => a.order - b.order)
   if (images.length === 0) images.push({ url: '/placeholder-listing.png' })

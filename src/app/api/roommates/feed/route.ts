@@ -81,11 +81,18 @@ export async function GET(request: NextRequest) {
     scores = computeBatchScores(viewerPrefs, viewerProfile.gender, computeInput)
 
     // Append scores and sort
+    // [F-17] Project only display-essential fields — do NOT expose raw preference data
+    // (smoking, drinking, budget, etc.) of other users to the viewer.
     const scoredTargets = validTargets
       .map(t => ({
-        ...t,
-        prefs: Array.isArray(t.user_preferences) ? t.user_preferences[0] : t.user_preferences,
-        compatibility: scores[t.id] ?? -1
+        id: t.id,
+        name: t.name,
+        avatar_url: t.avatar_url,
+        year: t.year,
+        branch: t.branch,
+        gender: t.gender,
+        looking_for_buddy: t.looking_for_buddy,
+        compatibility: scores[t.id] ?? -1,
       }))
       .filter(t => t.compatibility >= 0) // filter out gender mismatches
       .sort((a, b) => b.compatibility - a.compatibility)

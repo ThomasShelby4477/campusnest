@@ -4,8 +4,22 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { csrfGuard } from '@/lib/csrf'
 
+// [F-6] Only allow images from our own Supabase storage bucket.
+// This blocks tracking pixels, external SVGs (XSS risk), and content injection
+// from third-party domains.
+function isSupabaseStorageUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host.endsWith('.supabase.co') || host.endsWith('.supabase.in')
+  } catch {
+    return false
+  }
+}
+
 const imageSchema = z.object({
-  url: z.string().url(),
+  url: z.string().url().refine(isSupabaseStorageUrl, {
+    message: 'Image must be uploaded to CampusNest storage',
+  }),
   order: z.number().int(),
   is_primary: z.boolean().default(false),
 })

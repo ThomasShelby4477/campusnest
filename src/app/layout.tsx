@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { headers } from 'next/headers'
 import { Providers } from '@/components/providers'
 import { Navbar } from '@/components/navbar'
 import { ConsentBanner } from '@/components/consent-banner'
@@ -48,11 +49,16 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-content',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // [F-11] Read the per-request CSP nonce set by middleware.
+  // This nonce is passed to third-party script components so browsers allow
+  // only scripts that carry this token, eliminating the need for unsafe-inline.
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+
   return (
     <html lang="en" className={`${inter.variable} antialiased`}>
       <body className="font-sans bg-background text-foreground overflow-x-hidden">

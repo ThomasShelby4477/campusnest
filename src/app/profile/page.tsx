@@ -197,17 +197,7 @@ export default function ProfilePage() {
         },
         config: {
           display: {
-            blocks: {
-              upi: {
-                name: "Pay via UPI",
-                instruments: [
-                  {
-                    method: "upi"
-                  }
-                ]
-              },
-            },
-            sequence: ["block.upi"],
+            sequence: ['upi', 'card', 'netbanking', 'wallet', 'paylater'],
             preferences: {
               show_default_blocks: true,
             },

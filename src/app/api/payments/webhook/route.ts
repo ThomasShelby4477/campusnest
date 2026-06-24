@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
       const orderId = paymentEntity.order_id;
 
       if (orderId) {
-        // Update the payment record in the database to FAILED
         const { error } = await supabaseAdmin
           .from('payments')
           .update({ status: 'FAILED' })
@@ -44,9 +43,61 @@ export async function POST(request: NextRequest) {
 
         if (error) {
           console.error(`Failed to update payment status for order ${orderId}:`, error);
-          // Still return 200 so Razorpay knows we received it, but log the error
         } else {
           console.log(`Successfully updated order ${orderId} to FAILED`);
+        }
+      }
+    } else if (payload.event === 'order.paid') {
+      // Fallback for successful payments in case frontend verify fails
+      const orderEntity = payload.payload.order?.entity;
+      const paymentEntity = payload.payload.payment?.entity;
+      
+      const orderId = orderEntity?.id || paymentEntity?.order_id;
+      const paymentId = paymentEntity?.id;
+
+      if (orderId) {
+        // 1. Get the payment to find the user_id
+        const { data: payment } = await supabaseAdmin
+          .from('payments')
+          .select('user_id, status')
+          .eq('razorpay_order_id', orderId)
+          .single();
+
+        if (payment && payment.status !== 'PAID') {
+          // 2. Update payment to PAID
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              status: 'PAID',
+              razorpay_payment_id: paymentId,
+              verified_at: new Date().toISOString(),
+            })
+            .eq('razorpay_order_id', orderId);
+
+          // 3. Update profile to PRO
+          const expiresAt = new Date(Date.now() + 150 * 24 * 60 * 60 * 1000).toISOString();
+          await supabaseAdmin
+            .from('profiles')
+            .update({
+              subscription_status: 'PRO',
+              subscription_expires_at: expiresAt,
+              subscription_plan: 'pro-semester',
+            })
+            .eq('id', payment.user_id);
+
+          // 4. Create notification
+          const expiryDate = new Date(expiresAt).toLocaleDateString('en-IN', {
+            year: 'numeric', month: 'long', day: 'numeric',
+          });
+          await supabaseAdmin.from('notifications').insert({
+            user_id: payment.user_id,
+            type: 'LISTING_APPROVED',
+            title: 'Welcome to CampusNest Pro! 🎉',
+            body: `Your payment was confirmed. Your subscription is active until ${expiryDate}.`,
+            link: '/profile',
+          });
+
+          console.log(`Successfully fulfilled order.paid for order ${orderId}`);
         }
       }
     }

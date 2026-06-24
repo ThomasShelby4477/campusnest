@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Upload, FileCheck, X, Camera } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
 
 interface IdUploadStepProps {
   onUploaded: () => void
@@ -45,22 +46,35 @@ export function IdUploadStep({ onUploaded }: IdUploadStepProps) {
     }
     setUploading(true)
     try {
-      // Upload ID card
+      // Compress ID card
+      const idOptions = { maxSizeMB: 1, maxWidthOrHeight: 2000, useWebWorker: true }
+      const compressedId = idFile.type === 'application/pdf' ? idFile : await imageCompression(idFile, idOptions)
+      
       const idFormData = new FormData()
-      idFormData.append('file', idFile)
+      idFormData.append('file', compressedId)
       idFormData.append('type', 'id-card')
 
       const idRes = await fetch('/api/upload/id-card', { method: 'POST', body: idFormData })
-      const idData = await idRes.json()
+      
       if (!idRes.ok) {
-        toast.error(idData.error || 'Failed to upload ID card')
+        let errorMsg = 'Failed to upload ID card'
+        try {
+          const idData = await idRes.json()
+          errorMsg = idData.error || errorMsg
+        } catch {
+          if (idRes.status === 413) errorMsg = 'File is still too large. Please upload a smaller file.'
+        }
+        toast.error(errorMsg)
         return
       }
 
       // Upload selfie if provided
       if (selfieFile) {
+        const selfieOptions = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true }
+        const compressedSelfie = selfieFile.type === 'application/pdf' ? selfieFile : await imageCompression(selfieFile, selfieOptions)
+        
         const selfieFormData = new FormData()
-        selfieFormData.append('file', selfieFile)
+        selfieFormData.append('file', compressedSelfie)
         selfieFormData.append('type', 'selfie')
 
         const selfieRes = await fetch('/api/upload/id-card', { method: 'POST', body: selfieFormData })

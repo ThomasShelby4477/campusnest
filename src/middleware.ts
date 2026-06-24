@@ -33,7 +33,7 @@ function buildCsp(nonce: string): string {
     // 'strict-dynamic' allows Next.js to load its own dynamically-created scripts
     // without needing their hashes listed individually.
     // 'unsafe-eval' retained for Firebase SDK & Next.js dev HMR compatibility.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com https://checkout.razorpay.com`,
     // Styles: Google Fonts CDN requires unsafe-inline for its injected <style> tags.
     // This is an accepted trade-off; inline styles carry a lower XSS risk than scripts.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -41,8 +41,10 @@ function buildCsp(nonce: string): string {
     "font-src 'self' https://fonts.gstatic.com",
     // Images: Supabase storage + Google Maps tiles
     "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://maps.googleapis.com https://maps.gstatic.com",
-    // Network: Supabase REST + Realtime + Firebase FCM + Google Maps
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fcm.googleapis.com https://maps.googleapis.com",
+    // Network: Supabase REST + Realtime + Firebase FCM + Google Maps + Razorpay Telemetry
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fcm.googleapis.com https://maps.googleapis.com https://lumberjack.razorpay.com https://api.razorpay.com",
+    // Iframes: Razorpay checkout modal
+    "frame-src 'self' https://api.razorpay.com",
     // Service workers (Firebase SW)
     "worker-src 'self' blob:",
     // Prevent embedding in any foreign frame

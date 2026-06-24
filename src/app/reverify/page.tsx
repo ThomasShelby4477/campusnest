@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Upload, X, Camera, ImageIcon, Loader2, IdCard, PencilLine } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
 
 const BRANCHES = [
   'Computer Science', 'Forensic Science', 'Cyber Security',
@@ -131,25 +132,43 @@ export default function ReverifyPage() {
 
       // 2. Upload new ID card if selected
       if (newIdCard) {
+        const idOptions = { maxSizeMB: 1, maxWidthOrHeight: 2000, useWebWorker: true }
+        const compressedId = newIdCard.type === 'application/pdf' ? newIdCard : await imageCompression(newIdCard, idOptions)
+        
         const formData = new FormData()
-        formData.append('file', newIdCard)
+        formData.append('file', compressedId)
         formData.append('type', 'id-card')
         const uploadRes = await fetch('/api/upload/id-card', { method: 'POST', body: formData })
         if (!uploadRes.ok) {
-          const err = await uploadRes.json()
-          throw new Error(err.error || 'Failed to upload ID card')
+          let errorMsg = 'Failed to upload ID card'
+          try {
+            const err = await uploadRes.json()
+            errorMsg = err.error || errorMsg
+          } catch {
+            if (uploadRes.status === 413) errorMsg = 'File is still too large. Please upload a smaller file.'
+          }
+          throw new Error(errorMsg)
         }
       }
 
       // 3. Upload new selfie if selected
       if (newSelfie) {
+        const selfieOptions = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true }
+        const compressedSelfie = newSelfie.type === 'application/pdf' ? newSelfie : await imageCompression(newSelfie, selfieOptions)
+        
         const formData = new FormData()
-        formData.append('file', newSelfie)
+        formData.append('file', compressedSelfie)
         formData.append('type', 'selfie')
         const uploadRes = await fetch('/api/upload/id-card', { method: 'POST', body: formData })
         if (!uploadRes.ok) {
-          const err = await uploadRes.json()
-          throw new Error(err.error || 'Failed to upload selfie')
+          let errorMsg = 'Failed to upload selfie'
+          try {
+            const err = await uploadRes.json()
+            errorMsg = err.error || errorMsg
+          } catch {
+            if (uploadRes.status === 413) errorMsg = 'Selfie is still too large. Please upload a smaller file.'
+          }
+          throw new Error(errorMsg)
         }
       }
 

@@ -12,9 +12,13 @@ const ALLOWED_ORIGINS = [
   process.env.NEXT_PUBLIC_SITE_URL,
   // Optional: set ADDITIONAL_ALLOWED_ORIGIN for dev tunnels (e.g. ngrok)
   process.env.ADDITIONAL_ALLOWED_ORIGIN,
-  // Always allow localhost in development
+  // Vercel deployment URLs
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : null,
   process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : null,
   process.env.NODE_ENV !== 'production' ? 'http://localhost:3001' : null,
+  process.env.NODE_ENV !== 'production' ? 'http://127.0.0.1:3000' : null,
+  process.env.NODE_ENV !== 'production' ? 'http://127.0.0.1:3001' : null,
 ].filter(Boolean) as string[]
 
 /**
@@ -28,7 +32,24 @@ export function isValidOrigin(request: Request): boolean {
   if (!origin) return true
 
   // Check against allowed origins
-  return ALLOWED_ORIGINS.some((allowed) => origin === allowed)
+  if (ALLOWED_ORIGINS.some((allowed) => origin === allowed)) return true
+
+  // Allow Vercel preview deployments dynamically
+  if (origin.endsWith('.vercel.app')) return true
+
+  // In development, allow any local IP (e.g. 192.168.x.x, 10.x.x.x)
+  if (process.env.NODE_ENV !== 'production') {
+    if (
+      origin.startsWith('http://localhost:') || 
+      origin.startsWith('http://127.0.0.1:') ||
+      origin.startsWith('http://192.168.') ||
+      origin.startsWith('http://10.')
+    ) {
+      return true
+    }
+  }
+
+  return false
 }
 
 /**

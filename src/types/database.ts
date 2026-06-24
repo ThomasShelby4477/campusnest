@@ -16,6 +16,8 @@ export type FoodPref = 'VEG' | 'NON_VEG' | 'EGGETARIAN' | 'ANY';
 export type Personality = 'INTROVERT' | 'EXTROVERT' | 'AMBIVERT';
 export type GenderPref = 'MALE' | 'FEMALE' | 'ANY';
 export type ChatType = 'ROOMMATE' | 'BUDDY';
+export type SubscriptionStatus = 'FREE' | 'PRO';
+export type PaymentStatus = 'CREATED' | 'PAID' | 'FAILED';
 export type ReportTargetType = 'USER' | 'LISTING';
 export type ReportReason = 'FAKE_LISTING' | 'SCAM' | 'HARASSMENT' | 'SPAM' | 'DISCRIMINATION' | 'OTHER';
 export type ReportStatus = 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED';
@@ -52,6 +54,9 @@ export interface Profile {
   looking_for_buddy: boolean;
   fcm_token: string | null;
   rejection_reason: string | null;
+  subscription_status: SubscriptionStatus;
+  subscription_expires_at: string | null;
+  subscription_plan: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -181,6 +186,20 @@ export interface ConsentRecord {
   policy_version: string;
   consented_at: string;
   ip_address: string | null;
+}
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string | null;
+  razorpay_signature: string | null;
+  amount: number;
+  currency: string;
+  plan: string;
+  status: PaymentStatus;
+  created_at: string;
+  verified_at: string | null;
 }
 
 /* ── Public profile view ───────────────────────────────────── */

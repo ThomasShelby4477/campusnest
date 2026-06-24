@@ -3,18 +3,21 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { HandHeart, Check, Clock, X, Send } from 'lucide-react'
+import { HandHeart, Check, Clock, X, Send, Crown } from 'lucide-react'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 interface Props {
   listingId: string
   isLoggedIn: boolean
   isVerifiedUser: boolean
+  isProUser: boolean
   isOwnListing: boolean
 }
 
-export function ListingContactButton({ listingId, isLoggedIn, isVerifiedUser, isOwnListing }: Props) {
+export function ListingContactButton({ listingId, isLoggedIn, isVerifiedUser, isProUser, isOwnListing }: Props) {
   const [open, setOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [requestStatus, setRequestStatus] = useState<string | null>(null)
@@ -52,6 +55,13 @@ export function ListingContactButton({ listingId, isLoggedIn, isVerifiedUser, is
         setRequestStatus(data.status || 'PENDING')
         toast.info(data.message)
         setOpen(false)
+        return
+      }
+
+      // [SUBSCRIPTION] Handle PRO_REQUIRED as safety fallback
+      if (data.error === 'PRO_REQUIRED') {
+        setOpen(false)
+        setUpgradeOpen(true)
         return
       }
 
@@ -132,6 +142,10 @@ export function ListingContactButton({ listingId, isLoggedIn, isVerifiedUser, is
             toast.error('Only verified students can contact posters for safety. Please verify your profile first.')
             return
           }
+          if (!isProUser) {
+            setUpgradeOpen(true)
+            return
+          }
           setOpen(true)
         }}
       >
@@ -198,6 +212,48 @@ export function ListingContactButton({ listingId, isLoggedIn, isVerifiedUser, is
                 </>
               )}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade to Pro dialog */}
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="w-5 h-5 text-coral" /> CampusNest Pro Required
+            </DialogTitle>
+            <DialogDescription>
+              Upgrade to CampusNest Pro to show interest on listings and contact posters.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="bg-gradient-to-r from-coral/5 via-coral/10 to-coral/5 rounded-xl p-4 border border-coral/20">
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="text-3xl font-black text-navy">₹199</span>
+                <span className="text-text-muted font-medium">/ semester</span>
+              </div>
+              <div className="space-y-2">
+                {['Show interest on listings', 'Post property listings', 'Contact posters directly'].map(b => (
+                  <div key={b} className="flex items-center gap-2 text-sm text-text-primary">
+                    <Check className="w-4 h-4 text-success shrink-0" />
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setUpgradeOpen(false)}>
+              Maybe Later
+            </Button>
+            <Link href="/profile#subscription" className="flex-1">
+              <Button className="w-full bg-coral hover:bg-coral-dark text-white">
+                <Crown className="w-4 h-4 mr-2" /> Upgrade Now
+              </Button>
+            </Link>
           </div>
         </DialogContent>
       </Dialog>

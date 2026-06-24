@@ -4,7 +4,6 @@ import type { NextRequest } from 'next/server'
 
 const protectedPaths = [
   '/create-listing',
-  '/roommates',
   '/chat',
   '/chats',
   '/saved',

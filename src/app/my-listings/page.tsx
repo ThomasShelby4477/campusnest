@@ -9,6 +9,8 @@ import { Building, Pencil, Trash2, Eye, MapPin, AlertCircle, Clock } from 'lucid
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/empty-state'
+import { SubscriptionGate } from '@/components/subscription-gate'
+import { isProUser as checkProUser } from '@/lib/subscription'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,7 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [userIsPro, setUserIsPro] = useState(true) // default true to avoid flash
   const router = useRouter()
   const supabase = createClient()
 
@@ -49,6 +52,16 @@ export default function MyListingsPage() {
       .eq('poster_id', user.id)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
+
+    // Check subscription status
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('role, subscription_status, subscription_expires_at')
+      .eq('id', user.id)
+      .single()
+    if (profileData) {
+      setUserIsPro(checkProUser(profileData as any))
+    }
 
     if (data) setListings(data)
     setLoading(false)
@@ -101,9 +114,9 @@ export default function MyListingsPage() {
                   <p className="text-sm text-text-muted">Manage your properties</p>
                 </div>
               </div>
-              <Link href="/create-listing">
+              <Link href={userIsPro ? '/create-listing' : '/profile#subscription'}>
                 <Button className="bg-coral hover:bg-coral-dark text-white font-semibold rounded-2xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]">
-                  + Post New Listing
+                  {userIsPro ? '+ Post New Listing' : '🔒 Upgrade to Post'}
                 </Button>
               </Link>
             </div>

@@ -79,12 +79,26 @@ export async function POST(
     // Get requester's profile
     const { data: requesterProfile } = await supabaseAdmin
       .from('profiles')
-      .select('name, verified_status')
+      .select('name, verified_status, role, subscription_status, subscription_expires_at')
       .eq('id', user.id)
       .single()
 
     if (requesterProfile?.verified_status !== 'VERIFIED') {
       return NextResponse.json({ error: 'Only verified students can contact posters' }, { status: 403 })
+    }
+
+    // [SUBSCRIPTION] Pro subscription gate — admins exempt
+    if (requesterProfile.role !== 'ADMIN') {
+      const isPro =
+        requesterProfile.subscription_status === 'PRO' &&
+        requesterProfile.subscription_expires_at &&
+        new Date(requesterProfile.subscription_expires_at) > new Date()
+      if (!isPro) {
+        return NextResponse.json(
+          { error: 'PRO_REQUIRED', message: 'Upgrade to CampusNest Pro to show interest' },
+          { status: 403 }
+        )
+      }
     }
 
     // Create the interest request

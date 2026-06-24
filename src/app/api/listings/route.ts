@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user is allowed to post (must be VERIFIED)
+    // Verify user is allowed to post (must be VERIFIED + PRO subscription)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('verified_status, gender')
+      .select('verified_status, gender, role, subscription_status, subscription_expires_at')
       .eq('id', user.id)
       .single()
 
@@ -76,6 +76,20 @@ export async function POST(request: NextRequest) {
         { error: 'Only verified users can post listings' },
         { status: 403 }
       )
+    }
+
+    // [SUBSCRIPTION] Pro subscription gate — admins exempt
+    if (profile.role !== 'ADMIN') {
+      const isPro =
+        profile.subscription_status === 'PRO' &&
+        profile.subscription_expires_at &&
+        new Date(profile.subscription_expires_at) > new Date()
+      if (!isPro) {
+        return NextResponse.json(
+          { error: 'PRO_REQUIRED', message: 'Upgrade to CampusNest Pro to create listings' },
+          { status: 403 }
+        )
+      }
     }
 
     // Derive gender_allowed from the poster's own gender.

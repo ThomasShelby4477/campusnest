@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression'
 import { EmptyState } from '@/components/empty-state'
+import { SubscriptionGate } from '@/components/subscription-gate'
 import { BasicInfoStep } from './steps/basic-info'
 import { AmenitiesStep } from './steps/amenities'
 import { LocationStep } from './steps/location'
@@ -19,6 +20,7 @@ export default function CreateListingPage() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isVerified, setIsVerified] = useState<boolean | null>(null)
+  const [isPro, setIsPro] = useState<boolean | null>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
@@ -30,8 +32,15 @@ export default function CreateListingPage() {
         router.push('/')
         return
       }
-      const { data } = await supabase.from('profiles').select('verified_status').eq('id', user.id).single()
+      const { data } = await supabase.from('profiles').select('verified_status, role, subscription_status, subscription_expires_at').eq('id', user.id).single()
       setIsVerified(data?.verified_status === 'VERIFIED')
+      setIsPro(
+        data?.role === 'ADMIN' || (
+          data?.subscription_status === 'PRO' &&
+          !!data?.subscription_expires_at &&
+          new Date(data.subscription_expires_at) > new Date()
+        )
+      )
       setIsCheckingAuth(false)
     }
     checkAuth()
@@ -172,6 +181,10 @@ export default function CreateListingPage() {
         </div>
       </div>
     )
+  }
+
+  if (isVerified && isPro === false) {
+    return <SubscriptionGate title="Pro Required to Post Listings" />
   }
 
   const stepMeta = [

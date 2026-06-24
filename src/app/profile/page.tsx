@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X, Camera, Loader2, RefreshCw } from 'lucide-react'
+import { User, Settings, Shield, Heart, LogOut, ChevronRight, Pencil, Save, X, Camera, Loader2, RefreshCw, Crown, Check, Clock } from 'lucide-react'
+import Script from 'next/script'
+import { isProUser as checkProUser, daysRemaining, PLANS } from '@/lib/subscription'
 
 export default function ProfilePage() {
   const { user, setUser } = useAuthStore()
@@ -23,8 +25,12 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState('')
   const [lookingForBuddy, setLookingForBuddy] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+
+  const isPro = user ? checkProUser(user) : false
+  const remaining = user ? daysRemaining(user) : 0
 
   useEffect(() => {
     if (user) {
@@ -119,7 +125,99 @@ export default function ProfilePage() {
 
   const verifiedBadge = user.verified_status === 'VERIFIED'
 
+  // ── Razorpay payment handler ──────────────────────────────
+  const handleUpgrade = async () => {
+    if (user.verified_status !== 'VERIFIED') {
+      toast.error('Please verify your profile before upgrading')
+      return
+    }
+
+    setPaymentLoading(true)
+    try {
+      // 1. Create order on server
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const orderData = await orderRes.json()
+
+      if (!orderRes.ok) {
+        if (orderData.error === 'Already subscribed') {
+          toast.info('You already have an active Pro subscription!')
+          return
+        }
+        throw new Error(orderData.error || 'Failed to create order')
+      }
+
+      // 2. Open Razorpay checkout
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'CampusNest',
+        description: 'Pro Semester Subscription',
+        order_id: orderData.orderId,
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          // 3. Verify payment on server
+          try {
+            const verifyRes = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            })
+            const verifyData = await verifyRes.json()
+
+            if (verifyData.success) {
+              // Update local state
+              setUser({
+                ...user,
+                subscription_status: 'PRO',
+                subscription_expires_at: verifyData.expiresAt,
+                subscription_plan: 'pro-semester',
+              })
+              toast.success('Welcome to CampusNest Pro! 🎉')
+            } else {
+              toast.error('Payment verification failed. Please contact support.')
+            }
+          } catch {
+            toast.error('Verification error. Your payment is safe — please contact support.')
+          }
+        },
+        prefill: {
+          name: user.name || '',
+          email: user.email || '',
+          contact: user.phone || '',
+        },
+        theme: {
+          color: '#E8593C', // coral
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentLoading(false)
+          },
+        },
+      }
+
+      const rzp = new (window as any).Razorpay(options)
+      rzp.on('payment.failed', () => {
+        toast.error('Payment failed. Please try again.')
+        setPaymentLoading(false)
+      })
+      rzp.open()
+    } catch (err: any) {
+      toast.error(err.message || 'Something went wrong')
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
   return (
+    <>
+    <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
     <div className="min-h-[calc(100vh-64px)] bg-muted-bg pb-24 sm:pb-12">
       <div className="max-w-2xl mx-auto pt-8 px-4">
 
@@ -281,18 +379,116 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Subscription Card */}
+        <div id="subscription" className="bg-white rounded-2xl border border-border-light p-6 sm:p-8 shadow-sm mb-6 scroll-mt-24">
+          {isPro ? (
+            /* ── Active Pro ───────────────────────────── */
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-success" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-navy">CampusNest Pro</h2>
+                  <p className="text-xs text-success font-semibold">Active</p>
+                </div>
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-success" />
+                  <span className="text-text-primary">Active until {user.subscription_expires_at ? new Date(user.subscription_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-text-muted" />
+                  <span className="text-text-muted">{remaining} day{remaining !== 1 ? 's' : ''} remaining</span>
+                </div>
+              </div>
+              {remaining <= 30 && (
+                <Button
+                  onClick={handleUpgrade}
+                  disabled={paymentLoading}
+                  className="w-full bg-coral hover:bg-coral-dark text-white font-semibold rounded-xl"
+                >
+                  {paymentLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Crown className="w-4 h-4 mr-2" />
+                  )}
+                  Renew Subscription
+                </Button>
+              )}
+            </div>
+          ) : (
+            /* ── Free / Expired ───────────────────────── */
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-coral/10 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-coral" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-navy">CampusNest Pro</h2>
+                  <p className="text-xs text-text-muted">Unlock full access</p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 mb-5">
+                {[
+                  'Show interest on property listings',
+                  'Post your own property listings',
+                  'Contact listing posters directly',
+                ].map((benefit) => (
+                  <div key={benefit} className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 text-success" />
+                    </div>
+                    <span className="text-sm text-text-primary">{benefit}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-3xl font-black text-navy">{PLANS['pro-semester'].displayPrice}</span>
+                <span className="text-text-muted font-medium">/ {PLANS['pro-semester'].displayDuration}</span>
+              </div>
+
+              {user.verified_status === 'VERIFIED' ? (
+                <Button
+                  onClick={handleUpgrade}
+                  disabled={paymentLoading}
+                  className="w-full h-12 bg-coral hover:bg-coral-dark text-white font-bold text-base rounded-xl shadow-md shadow-coral/20 transition-all hover:shadow-lg hover:shadow-coral/25 active:scale-[0.98]"
+                >
+                  {paymentLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <Crown className="w-5 h-5 mr-2" />
+                  )}
+                  Upgrade Now
+                </Button>
+              ) : (
+                <div className="text-center py-3 bg-muted-bg rounded-xl border border-border-light">
+                  <p className="text-sm text-text-muted">Verify your profile first to upgrade</p>
+                </div>
+              )}
+              <p className="text-[11px] text-text-muted text-center mt-2">One-time payment · Secure via Razorpay</p>
+            </div>
+          )}
+        </div>
+
         {/* Quick Links */}
         <div className="bg-white rounded-2xl border border-border-light overflow-hidden shadow-sm mb-6">
           {[
             { label: 'My Listings', href: '/my-listings', icon: '🏠' },
             { label: 'Interest Requests', href: '/interest-requests', icon: '🤝' },
             { label: 'Saved Listings', href: '/saved', icon: '❤️' },
-            { label: 'Roommate Preferences', href: '/roommates/quiz', icon: '🧩' },
+            { label: 'Roommate Preferences', href: '/roommates', icon: '🧩', badge: 'Coming Soon' },
             { label: 'Notifications', href: '/notifications', icon: '🔔' },
           ].map((item, i) => (
             <Link key={i} href={item.href} className="flex items-center justify-between p-4 hover:bg-muted-bg transition-colors border-b border-border-light last:border-b-0">
               <span className="flex items-center gap-3 font-medium text-text-primary">
                 <span className="text-lg">{item.icon}</span> {item.label}
+                {'badge' in item && item.badge && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-coral/10 text-coral rounded-full">{item.badge}</span>
+                )}
               </span>
               <ChevronRight className="w-4 h-4 text-text-muted" />
             </Link>
@@ -313,5 +509,6 @@ export default function ProfilePage() {
 
       </div>
     </div>
+    </>
   )
 }

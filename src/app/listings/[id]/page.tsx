@@ -77,13 +77,19 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   // Check auth for contact button visibility + gender guard
   const { data: { user } } = await supabase.auth.getUser()
   let isVerifiedUser = false
+  let isProUser = false
   let userGender: string | null = null
   let userRole: string | null = null
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('verified_status, gender, role').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('profiles').select('verified_status, gender, role, subscription_status, subscription_expires_at').eq('id', user.id).single()
     isVerifiedUser = profile?.verified_status === 'VERIFIED'
     userGender = profile?.gender ?? null
     userRole = profile?.role ?? null
+    isProUser = profile?.role === 'ADMIN' || (
+      profile?.subscription_status === 'PRO' &&
+      !!profile?.subscription_expires_at &&
+      new Date(profile.subscription_expires_at) > new Date()
+    )
   }
 
   // ── Hard gender access check ──────────────────────────────
@@ -371,6 +377,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   listingId={listing.id} 
                   isLoggedIn={!!user}
                   isVerifiedUser={isVerifiedUser}
+                  isProUser={isProUser}
                   isOwnListing={user?.id === listing.poster_id}
                 />
               </div>

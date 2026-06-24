@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const order = await razorpay.orders.create({
       amount: 19900,
       currency: 'INR',
-      receipt: `cn_pro_${user.id}_${Date.now()}`,
+      receipt: `cn_${user.id.split('-')[0]}_${Date.now()}`,
     });
 
     // Insert payment record

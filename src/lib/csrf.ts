@@ -34,9 +34,6 @@ export function isValidOrigin(request: Request): boolean {
   // Check against allowed origins
   if (ALLOWED_ORIGINS.some((allowed) => origin === allowed)) return true
 
-  // Allow Vercel preview deployments dynamically
-  if (origin.endsWith('.vercel.app')) return true
-
   // In development, allow any local IP (e.g. 192.168.x.x, 10.x.x.x)
   if (process.env.NODE_ENV !== 'production') {
     if (

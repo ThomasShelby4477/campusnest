@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   // [F-7] Distributed rate limit: 5 OTP requests per 15 minutes per IP
   // Uses Supabase-backed counter shared across all serverless instances.
   const ip = getClientIp(request)
-  const rlIp: DistributedRateLimitResult = await rateLimitDistributed(`otp:ip:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 })
+  const rlIp: DistributedRateLimitResult = await rateLimitDistributed(`otp:ip:${ip}`, { limit: 20, windowMs: 15 * 60 * 1000 })
   if (!rlIp.success) {
     return NextResponse.json(
       { error: 'Too many OTP requests. Please wait before trying again.' },
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // from many source IPs. Shared across all serverless instances.
     const rlEmail: DistributedRateLimitResult = await rateLimitDistributed(
       `otp:email:${email.toLowerCase()}`,
-      { limit: 5, windowMs: 15 * 60 * 1000 }
+      { limit: 20, windowMs: 15 * 60 * 1000 }
     )
     if (!rlEmail.success) {
       return NextResponse.json(

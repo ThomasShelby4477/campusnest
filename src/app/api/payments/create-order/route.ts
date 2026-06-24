@@ -114,10 +114,10 @@ export async function POST(request: NextRequest) {
       currency: order.currency,
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create order error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error?.description || error?.message || 'Internal server error', details: error },
       { status: 500 }
     );
   }
